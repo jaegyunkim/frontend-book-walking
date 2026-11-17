@@ -1,0 +1,12 @@
+{
+  "name": "북 워킹 · Book Walking",
+  "short_name": "북 워킹",
+  "description": "날씨를 보고 걷기 좋은 길과 그 길에 어울리는 책을 골라 주는 도서 AI 에이전트",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#1E3A8A",
+  "icons": [{ "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

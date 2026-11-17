@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FFFFFF">
+  <meta name="description" content="북 워킹 — 오늘 날씨에 걷기 좋은 길과 그 길에 어울리는 책, 2분 오디오 워킹까지 골라 주는 도서 AI 에이전트">
+  <title>북 워킹 · Book Walking</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=0.1.0">
+</head>
+<body>
+  <!-- 로그인 -->
+  <section id="loginView" class="login-view" hidden>
+    <div class="login-card">
+      <p class="eyebrow">BOOK WALKING · 도서 AI 에이전트</p>
+      <h1>오늘 걷기 좋은 길과<br>그 길에 어울리는 한 권</h1>
+      <p class="deck">날씨·미세먼지·걷기길·캠핑장·지역 관광 데이터를 모아 산책 코스와 책, 2분 오디오 워킹을 만들어 드립니다.</p>
+      <form id="loginForm" autocomplete="on">
+        <label class="field"><span>아이디(이메일)</span><input id="loginId" name="username" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="254"></label>
+        <label class="field"><span>비밀번호</span><input id="loginPw" name="password" type="password" autocomplete="current-password" required maxlength="128"></label>
+        <label class="remember"><input type="checkbox" id="rememberId"> 아이디 저장</label>
+        <button type="submit" id="loginBtn" class="primary">로그인</button>
+      </form>
+      <p id="loginMsg" class="msg" role="alert"></p>
+      <a class="signup" href="register.html">베타 테스터 신청하기 →</a>
+      <p id="serverLine" class="server-line"></p>
+    </div>
+  </section>
+
+  <!-- 첫 로그인 비밀번호 변경 -->
+  <dialog id="pwDialog">
+    <form id="pwForm" method="dialog">
+      <h2>새 비밀번호를 정해 주세요</h2>
+      <p class="muted">처음 로그인했거나 관리자가 초기화한 계정입니다. 10자 이상으로 정해 주세요.</p>
+      <label class="field"><span>지금 비밀번호</span><input id="pwCur" type="password" autocomplete="current-password" required></label>
+      <label class="field"><span>새 비밀번호</span><input id="pwNew" type="password" autocomplete="new-password" minlength="10" required></label>
+      <p id="pwMsg" class="msg" role="alert"></p>
+      <button class="primary" id="pwBtn" type="submit">바꾸기</button>
+    </form>
+  </dialog>
+
+  <div id="appView" class="app" hidden>
+    <header class="top">
+      <div class="brand"><img src="assets/icon.svg" alt="" width="30" height="30"><div><b>북 워킹</b><small>Book Walking</small></div></div>
+      <div class="top-right"><span id="timer" class="timer" hidden></span><button id="btnLogout" class="ghost" type="button">로그아웃</button></div>
+    </header>
+    <div id="toast" class="toast" role="status" hidden></div>
+
+    <main>
+      <!-- 오늘의 북 워킹 -->
+      <section id="tab-plan" class="tab active" aria-label="오늘의 북 워킹">
+        <form id="planForm" class="plan-form">
+          <h2>어디서, 언제 걸을까요?</h2>
+          <div class="row">
+            <label class="field grow"><span>출발지</span><input id="origin" placeholder="예: 서울 마포구 망원동" maxlength="80" required></label>
+            <button type="button" id="btnLocate" class="ghost small" title="현재 위치 사용">현재 위치</button>
+          </div>
+          <div class="field"><span>날짜</span><div id="dateChips" class="chips" role="radiogroup"></div></div>
+          <div class="field"><span>상황 <em>예스24 상황별 베스트에서 책을 고릅니다</em></span><div id="situationChips" class="chips wrap" role="radiogroup"></div></div>
+          <div class="field"><span>누구와</span><div id="companionChips" class="chips" role="radiogroup"></div></div>
+          <label class="field"><span>한마디(선택) <em>상황을 몰라도 말로 하면 AI가 골라요</em></span><textarea id="message" rows="2" maxlength="300" placeholder="예: 토요일에 아이랑 가볍게 걷고 그림책도 읽고 싶어요"></textarea></label>
+          <button type="submit" id="btnPlan" class="primary block">북 워킹 만들기</button>
+        </form>
+        <div id="planResult" class="result" aria-live="polite"></div>
+      </section>
+
+      <!-- 상황별 책 -->
+      <section id="tab-books" class="tab" aria-label="상황별 책">
+        <h2>상황별 베스트</h2>
+        <div id="bookSituationChips" class="chips wrap"></div>
+        <div class="row filters">
+          <label>연령 <select id="bookAge"><option value="">전체</option><option value="10">10대</option><option value="20">20대</option><option value="30">30대</option><option value="40">40대</option><option value="50">50대</option><option value="60">60대+</option></select></label>
+          <label>성별 <select id="bookSex"><option value="A">전체</option><option value="F">여성</option><option value="M">남성</option></select></label>
+        </div>
+        <form id="searchForm" class="row"><input id="searchQ" class="grow" placeholder="책 제목·저자 검색" maxlength="60"><button class="ghost small" type="submit">검색</button></form>
+        <div id="bookList" class="book-grid"></div>
+        <p class="attribution">도서 정보 제공: <a href="https://www.yes24.com" target="_blank" rel="noopener">예스24</a></p>
+      </section>
+
+      <!-- 내 책장 -->
+      <section id="tab-shelf" class="tab" aria-label="내 책장">
+        <h2>내 책장</h2>
+        <p class="muted">추천받은 책 중 마음에 든 책을 담아 두세요(최대 100권).</p>
+        <div id="shelfList" class="book-grid"></div>
+      </section>
+
+      <!-- 걷기 일기 -->
+      <section id="tab-diary" class="tab" aria-label="걷기 일기">
+        <h2>북 워킹 일기</h2>
+        <div id="diaryStats" class="metric-strip small"></div>
+        <form id="diaryForm" class="diary-form">
+          <label class="field"><span>걸은 코스</span><input id="diaryCourse" maxlength="120" placeholder="예: 해파랑길 2코스"></label>
+          <label class="field"><span>읽은 책</span><input id="diaryBook" maxlength="120" placeholder="책장에서 고르거나 직접 입력"></label>
+          <div class="row"><label class="field"><span>날짜</span><input id="diaryDate" type="date"></label><label class="field"><span>별점</span><select id="diaryRating"><option value="">-</option><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label></div>
+          <label class="field"><span>한 줄</span><textarea id="diaryNote" rows="2" maxlength="300" placeholder="오늘 걷고 읽은 한 줄"></textarea></label>
+          <button class="primary block" type="submit">기록하기</button>
+        </form>
+        <ol id="diaryList" class="diary-list"></ol>
+      </section>
+    </main>
+
+    <nav class="tabbar" aria-label="메뉴">
+      <button data-tab="plan" class="active" type="button"><span aria-hidden="true">🚶</span>오늘</button>
+      <button data-tab="books" type="button"><span aria-hidden="true">📚</span>상황별 책</button>
+      <button data-tab="shelf" type="button"><span aria-hidden="true">🔖</span>책장</button>
+      <button data-tab="diary" type="button"><span aria-hidden="true">📝</span>일기</button>
+    </nav>
+  </div>
+  <script src="config.js?v=0.1.0"></script>
+  <script src="app.js?v=0.1.0" type="module"></script>
+</body>
+</html>
