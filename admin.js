@@ -1,5 +1,5 @@
 // 북 워킹 관리자 화면(관리자 계정 로그인 상태에서만). 로그인은 서비스 화면에서 하고, 같은 탭 세션 토큰을 쓴다.
-import { state, api, health } from './auth.js?v=0.1.0';
+import { state, api, health } from './auth.js?v=0.1.1';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const t = d => d ? new Date(new Date(d).getTime() + 9 * 3600000).toISOString().slice(0, 16).replace('T', ' ') : '-';

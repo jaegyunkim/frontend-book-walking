@@ -1,4 +1,4 @@
-import {api} from './auth.js?v=0.1.0';
+import {api} from './auth.js?v=0.1.1';
 const form=document.querySelector('#requestForm');
 const result=document.querySelector('#result');
 const button=document.querySelector('#registerSubmit');

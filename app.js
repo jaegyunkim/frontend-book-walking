@@ -1,5 +1,5 @@
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth } from './auth.js?v=0.1.0';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth } from './auth.js?v=0.1.1';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -56,17 +56,17 @@ function renderPlan({ id, plan: p, voice }) {
   const nearbyList = (arr, title, note = '') => arr?.length ? `<div class="sec"><h3>${title}<small>${note}</small></h3><ul class="places">${arr.map(x => `<li><span>${safeUrl(x.url) ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>` : esc(x.name)} <small class="muted">${esc(x.category ?? x.type ?? '')}</small></span><span class="d">${x.distanceM != null ? km(x.distanceM) : ''}</span></li>`).join('')}</ul></div>` : '';
   $('#planResult').innerHTML = `
     <div class="metric-strip">
-      <div class="metric"><div class="metric-num ${w.gate}">${w.score}</div><div class="metric-label">걷기 지수 · ${esc(w.gateName)}</div></div>
-      <div class="metric"><div class="metric-num">${s?.temp ? `${s.temp.min}~${s.temp.max}°` : p.weather.mid?.temp?.min != null ? `${p.weather.mid.temp.min}~${p.weather.mid.temp.max}°` : '-'}</div><div class="metric-label">${esc(p.dateLabel)} 기온 · ${esc(p.weather.basis)}</div></div>
+      <div class="metric"><div class="metric-num ${w.gate}">${w.score}</div><div class="metric-label">${esc(w.gateName)}</div></div>
+      <div class="metric"><div class="metric-num">${s?.temp ? `${s.temp.min}~${s.temp.max}°` : p.weather.mid?.temp?.min != null ? `${p.weather.mid.temp.min}~${p.weather.mid.temp.max}°` : '-'}</div><div class="metric-label">${esc(p.dateLabel.slice(5))} 기온</div></div>
       <div class="metric"><div class="metric-num">${p.weather.air ? esc(p.weather.air.gradeName) : s?.popMax != null ? s.popMax + '%' : '-'}</div><div class="metric-label">${p.weather.air ? `미세먼지 PM10 ${p.weather.air.pm10 ?? '-'}` : '강수확률 최대'}</div></div>
     </div>
     <div class="card-lines">${p.card.map(l => `<p>${esc(l)}</p>`).join('')}</div>
-    <ul class="reasons">${w.reasons.map(r => `<li>${esc(r)}</li>`).join('')}${w.tips.map(t => `<li>💡 ${esc(t)}</li>`).join('')}</ul>
+    <ul class="reasons">${(w.reasons.length ? w.reasons : w.gate === 'caution' ? [`걷기 지수 ${w.score}점: 기온·바람 조건이 조금 아쉬워요`] : []).map(r => `<li>${esc(r)}</li>`).join('')}${w.tips.map(t => `<li>💡 ${esc(t)}</li>`).join('')}</ul>
     ${hours.length ? `<div class="hours">${hours.map(h => `<div class="hour">${esc(h.time)}<b>${h.temp ?? '-'}°</b>${esc(h.precip && h.precip !== '없음' ? h.precip : h.sky ?? '')}<div class="pop">${h.pop ?? 0}%</div></div>`).join('')}</div>` : ''}
     <div class="audio" id="audioBox"><h3>🎧 2분 오디오 워킹</h3><p class="muted">날씨·코스·책을 엮은 대본을 AI가 쓰고 음성으로 읽어 드려요. 걷기 직전에 들어 보세요.</p><button class="primary" type="button" id="btnScript">오디오 워킹 만들기</button></div>
     <div class="sec"><h3>📚 오늘의 책 <small>${esc(p.situation.emoji)} ${esc(p.situation.label)} · 예스24 베스트</small></h3>${p.books.map(b => bookHtml(b, p.situation.id)).join('') || '<p class="empty">책을 불러오지 못했습니다</p>'}</div>
     <div class="sec"><h3>🚶 걷기 코스 <small>두루누비 · 출발지 반경 ${p.courseSearch?.radiusKm ?? '-'}km</small></h3>${courses.map(courseHtml).join('') || '<p class="empty">가까운 코리아둘레길 코스가 없습니다</p>'}</div>
-    ${nearbyList(p.nearby.parks, '🌳 동네 산책', '출발지 3km 안 공원')}
+    ${nearbyList((p.nearby.parks ?? []).filter(x => !/화장실|주차장|매점|관리사무소/.test(x.name + x.category)), '🌳 동네 산책', '출발지 3km 안 공원')}
     ${nearbyList(p.indoor, '☔ 실내에서 읽기', '도서관·북카페')}
     ${nearbyList(p.nearby.bookstores, '🏬 코스 근처 서점', '카카오 로컬')}
     ${nearbyList(p.nearby.spots, '📍 코스 근처 관광지', '한국관광공사')}
