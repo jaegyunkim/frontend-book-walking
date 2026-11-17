@@ -1,5 +1,5 @@
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth } from './auth.js?v=0.1.1';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth } from './auth.js?v=0.1.2';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -183,8 +183,14 @@ async function showApp() {
   $('#loginView').hidden = true; $('#appView').hidden = false;
   if (!situations.length) { try { situations = (await api('/v1/situations', { noAuth: true })).situations; } catch { situations = []; } }
   drawForm();
+  syncAdmin();
   if (state.auth) timer = startTimer($('#timer'), { onWarn: () => toast('1분 뒤 자동 로그아웃됩니다'), onExpire: () => { logout('expired'); showLogin('이용 시간이 끝나 로그아웃했습니다. 다시 로그인해 주세요.'); } });
   if (state.auth?.user?.mustChangePassword) openPw();
+}
+/** 관리자 계정이면 상단에 관리자 페이지 버튼(같은 탭 세션을 그대로 쓴다) */
+async function syncAdmin() {
+  const btn = $('#btnAdmin'); btn.hidden = state.auth?.user?.role !== 'admin';
+  try { const me = await api('/v1/auth/me'); const role = me.role ?? me.user?.role; btn.hidden = role !== 'admin'; if (state.auth?.user) saveAuth({ ...state.auth, user: { ...state.auth.user, role } }); } catch { /* 표시만 영향 */ }
 }
 function openPw() { $('#pwMsg').textContent = ''; $('#pwDialog').showModal(); }
 $('#pwForm').onsubmit = async e => {
@@ -206,7 +212,7 @@ $('#loginForm').onsubmit = async e => {
   } catch (err) { $('#loginMsg').textContent = err.message; }
   finally { btn.disabled = false; }
 };
-$('#btnLogout').onclick = () => { logout(); showLogin('로그아웃했습니다.'); };
+$('#btnLogout').onclick = () => { logout(); $('#btnAdmin').hidden = true; showLogin('로그아웃했습니다.'); };
 setOnAuthLost(msg => showLogin(msg || '다시 로그인해 주세요'));
 setOnMustChange(openPw);
 

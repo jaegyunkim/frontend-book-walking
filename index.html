@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=0.1.1">
+  <link rel="stylesheet" href="style.css?v=0.1.2">
 </head>
 <body>
   <!-- 로그인 -->
@@ -47,7 +47,7 @@
   <div id="appView" class="app" hidden>
     <header class="top">
       <div class="brand"><img src="assets/icon.svg" alt="" width="30" height="30"><div><b>북 워킹</b><small>Book Walking</small></div></div>
-      <div class="top-right"><span id="timer" class="timer" hidden></span><button id="btnLogout" class="ghost" type="button">로그아웃</button></div>
+      <div class="top-right"><span id="timer" class="timer" hidden></span><a id="btnAdmin" class="ghost admin-link" href="admin.html" hidden>관리자</a><button id="btnLogout" class="ghost" type="button">로그아웃</button></div>
     </header>
     <div id="toast" class="toast" role="status" hidden></div>
 
@@ -111,7 +111,7 @@
       <button data-tab="diary" type="button"><span aria-hidden="true">📝</span>일기</button>
     </nav>
   </div>
-  <script src="config.js?v=0.1.1"></script>
-  <script src="app.js?v=0.1.1" type="module"></script>
+  <script src="config.js?v=0.1.2"></script>
+  <script src="app.js?v=0.1.2" type="module"></script>
 </body>
 </html>

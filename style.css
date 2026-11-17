@@ -155,3 +155,5 @@ input, select, textarea { font-size: 16px; }
   .hour { width: 52px; }
   .plan-form > button.primary { position: sticky; bottom: calc(var(--tabbar) + 8px + env(safe-area-inset-bottom)); z-index: 3; box-shadow: 0 6px 16px rgba(17,19,23,.18); }
 }
+
+.admin-link { display: inline-flex; align-items: center; text-decoration: none; min-height: 44px; }
