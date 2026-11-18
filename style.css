@@ -385,3 +385,11 @@ details.sec summary { font-weight: 700; min-height: 32px; cursor: pointer; }
 .clear-btn svg circle { fill: #cbd5e1; } .clear-btn svg path { stroke: #fff; stroke-width: 2; stroke-linecap: round; }
 .clear-btn:hover svg circle, .clear-btn:focus-visible svg circle { fill: #64748b; } .clear-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .clear-btn[hidden] { display: none; }
+/* 일기 날짜·별점 겹침 수정 v0.3.6: iOS 사파리 날짜 칸은 고유 최소 너비가 있어 flex 칸을 넘친다 → 최소 너비 0, 기본 모양 해제 */
+.row > .field { min-width: 0; }
+.diary-form .row { align-items: flex-start; }
+.diary-form .row .field { flex: 1 1 0; }
+input[type="date"] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; box-sizing: border-box; text-align: left; }
+input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+.diary-form .row input, .diary-form .row select { height: 48px; min-height: 48px; }
+.diary-form .row select { -webkit-appearance: none; appearance: none; padding-right: 36px; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='16' viewBox='0 0 12 16'%3E%3Cpath d='M2 6l4-4 4 4M2 10l4 4 4-4' fill='none' stroke='%23333' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 14px center; }
