@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.4.8';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.4.9';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.4.8';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.4.9';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -98,7 +98,7 @@ $('#planForm').onsubmit = async e => {
   finally { clearInterval(tick); btn.disabled = false; btn.textContent = '북 워킹 만들기'; }
 };
 
-// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.4.8): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
+// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.4.9): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
 const WX_ICON = {
   sun: '<circle cx="12" cy="12" r="4.2" class="i-sun"/><path class="i-ray" d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
   moon: '<path class="i-moon" d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>',
@@ -128,7 +128,7 @@ function renderPlan({ id, plan: p, voice }) {
   function detailButton(item, kind, point = item) {
     if (!item.name || !pointOf(point)) return '<small class="muted">상세 위치 미제공</small>';
     const index = destinations.push({ ...item, ...pointOf(point), kind }) - 1;
-    return `<button type="button" class="ghost small dest-open" data-destination="${index}" aria-label="${esc(item.name)} 목적지 상세">상세 정보</button>`;
+    return `<button type="button" class="ghost small dest-open" data-destination="${index}" aria-label="${esc(item.name)} 상세 정보">상세 정보</button>`;
   }
   const nearbyList = (arr, title, note = '') => arr?.length ? `<div class="sec"><h3>${title}<small>${note}</small></h3><ul class="places">${arr.map(x => `<li><span>${safeUrl(x.url) ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>` : esc(x.name)} <small class="muted">${esc(x.category ?? x.type ?? '')}</small><br>${detailButton(x, x.category ?? x.type ?? title)}</span><span class="d">${x.distanceM != null ? km(x.distanceM) : ''}</span></li>`).join('')}</ul></div>` : '';
   $('#planResult').innerHTML = `
@@ -272,7 +272,7 @@ function renderPlaces() {
   const isHere = Boolean(here && cur && cur === here.label), saved = places.find(p => p.label === cur);
   const temp = cur && !isHere && !saved ? cur : null; // 기록·추천·이번만 쓰기로 정한 출발지(저장 안 된 곳)
   const canSave = !full && (isHere || temp);
-  // 위계 v0.4.8: ① 선택 결과(배너) ② 현재 위치(큰 버튼) ③ 자주 걷는 곳(2칸 타일) ④ 저장·추가(글자 버튼)
+  // 위계 v0.4.9: ① 선택 결과(배너) ② 현재 위치(큰 버튼) ③ 자주 걷는 곳(2칸 타일) ④ 저장·추가(글자 버튼)
   const tile = (attrs, label, on, tag = '') => `<button type="button" class="origin-tile" role="radio" aria-checked="${on}" ${attrs}>${ORIGIN_ICON[on ? 'check' : 'pin']}<span>${esc(label)}</span>${tag}</button>`;
   box.innerHTML =
     `<button type="button" class="origin-gps" role="radio" aria-checked="${isHere}" data-here${locating ? ' aria-busy="true"' : ''}>${ORIGIN_ICON.gps}<span><b>${locating ? '현재 위치 찾는 중…' : '현재 위치'}</b><small>${isHere ? esc(here.label) : '지금 있는 곳에서 출발'}</small></span>${isHere ? ORIGIN_ICON.check : ''}</button>`

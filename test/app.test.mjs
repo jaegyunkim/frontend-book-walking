@@ -19,3 +19,4 @@ test('화면 문구는 해요체(합니다·십시오체가 남지 않음)', () 
 test('관리자 화면도 서비스 화면과 같은 색·모서리(디자인 통일)', () => { const c = read('admin.css'); assert.match(c, /--acc: #2F6B4F;/); assert.match(c, /--r: 12px;/); });
 test('로그인 화면: 짧은 헤드라인·이용 신청 버튼(설명·칩 없음)', () => { const h = read('index.html'); assert.match(h, /<h1 class="login-title">걷고, 읽고,<br><em>쉬어 가요<\/em><\/h1>/); assert.doesNotMatch(h, /class="login-feats"|class="deck"/); assert.match(h, /class="signup"[^>]*>처음이에요 · 이용 신청하기/); });
 test('지도·길찾기·두루누비·목적지 지도는 버튼 모양', () => { assert.match(read('style.css'), /\.links a, \.dest-links a\.link-btn \{[^}]*border: 1px solid var\(--hair\);[^}]*border-radius: var\(--r-sm\)/); assert.match(read('destination.js'), /<a class="link-btn"[^>]*>목적지 지도<\/a>/); });
+test("'목적지 상세' 문구는 모두 '상세 정보'로", () => { for (const f of ['index.html', 'app.js']) assert.doesNotMatch(read(f), /목적지 상세/, f); });
