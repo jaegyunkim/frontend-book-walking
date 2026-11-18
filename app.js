@@ -1,5 +1,5 @@
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth } from './auth.js?v=0.1.2';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncExpiry, remaining, sessionMinutes } from './auth.js?v=0.1.4';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -8,7 +8,7 @@ const km = m => m == null ? '-' : m >= 1000 ? (Math.round(m / 100) / 10) + 'km' 
 let timer = null, situations = [], lastPlan = null;
 const sel = { date: 'today', situation: null, companion: null, bookSituation: 'solo_walk' };
 
-function toast(msg, ms = 2600) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, ms); }
+function toast(msg, ms = 3200) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, ms); }
 function kstDate(offset = 0) { return new Date(Date.now() + 9 * 3600000 + offset * 86400000).toISOString().slice(0, 10); }
 function nextSaturday() { const d = new Date(Date.now() + 9 * 3600000); const add = (6 - d.getUTCDay() + 7) % 7; return kstDate(add); }
 
@@ -44,8 +44,8 @@ $('#planForm').onsubmit = async e => {
   const tick = setInterval(() => { i = (i + 1) % steps.length; const s = $('#stepName'); if (s) s.textContent = steps[i]; }, 900);
   try {
     const r = await api('/v1/plans', { method: 'POST', body: JSON.stringify({ origin, date: dateValue(), situation: sel.situation, companion: sel.companion, message: $('#message').value.trim() || undefined }), timeoutMs: 90000 });
-    lastPlan = r; renderPlan(r);
-  } catch (err) { $('#planResult').innerHTML = `<p class="msg">${esc(err.message)}</p>`; }
+    lastPlan = r; renderPlan(r); refreshUsage();
+  } catch (err) { if (err.code === 'AI_CREDIT_EXHAUSTED') refreshUsage(); $('#planResult').innerHTML = `<p class="msg">${esc(err.message)}</p>`; }
   finally { clearInterval(tick); btn.disabled = false; btn.textContent = '북 워킹 만들기'; }
 };
 
@@ -170,31 +170,202 @@ function go(tab) {
   if (tab === 'books' && !$('#bookList').children.length) loadBooks();
   if (tab === 'shelf') loadShelf();
   if (tab === 'diary') loadDiary();
+  if (tab === 'history') loadHistory();
+  if (tab !== 'plan') hideTipView(); else if (tipData && !tipClosed) $('#todayTip').hidden = false;
   window.scrollTo({ top: 0 });
 }
 document.querySelectorAll('.tabbar button').forEach(b => b.onclick = () => go(b.dataset.tab));
 
+// ---------- 자주 걷는 곳(최대 5곳, 어디물어 '출발지'와 같은 역할) ----------
+let places = [];
+function renderPlaces() {
+  const box = $('#placeChips');
+  $('#placeCount').textContent = `${places.length}/5`; $('#placeCount2').textContent = `${places.length}/5`;
+  box.innerHTML = places.map(p => `<button type="button" class="chip" role="radio" aria-checked="${p.selected}" data-place="${p.id}">📍 ${esc(p.label.split(' ').slice(-2).join(' '))}</button>`).join('') + '<button type="button" class="chip" id="placeManage">＋ 관리</button>';
+  box.querySelectorAll('[data-place]').forEach(b => b.onclick = async () => {
+    const p = places.find(x => String(x.id) === b.dataset.place); $('#origin').value = p.label;
+    try { places = (await api(`/v1/me/places/${p.id}/select`, { method: 'POST', body: '{}' })).places; renderPlaces(); } catch { /* 표시만 */ }
+  });
+  $('#placeManage').onclick = openPlaces;
+  $('#placeList').innerHTML = places.map(p => `<li><span>${p.selected ? '✓ ' : ''}${esc(p.label)}</span><button type="button" class="ghost small" data-del="${p.id}">지우기</button></li>`).join('') || '<li class="muted">아직 저장한 곳이 없습니다.</li>';
+  $('#placeList').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { places = (await api(`/v1/me/places/${b.dataset.del}/delete`, { method: 'POST', body: '{}' })).places; renderPlaces(); });
+}
+async function loadPlaces() { try { places = (await api('/v1/me/places')).places; renderPlaces(); const s = places.find(p => p.selected); if (s && !$('#origin').value) $('#origin').value = s.label; } catch { /* 부가 기능 */ } }
+async function addPlace(text) {
+  $('#placeMsg').textContent = '';
+  try { const r = await api('/v1/me/places', { method: 'POST', body: JSON.stringify({ text }) }); places = r.places; renderPlaces(); toast(`'${r.place.label}'을 저장했어요`); return true; }
+  catch (e) { $('#placeMsg').textContent = e.message; toast(e.message); return false; }
+}
+function openPlaces() { $('#settingsDialog').open && $('#settingsDialog').close(); $('#placeMsg').textContent = ''; $('#placeInput').value = ''; renderPlaces(); $('#placesDialog').showModal(); }
+$('#placeAdd').onclick = async () => { const v = $('#placeInput').value.trim(); if (v && await addPlace(v)) $('#placeInput').value = ''; };
+$('#btnSavePlace').onclick = () => { const v = $('#origin').value.trim(); if (!v) return toast('출발지를 먼저 입력해 주세요'); addPlace(/^-?\d/.test(v) ? v : v); };
+
+// ---------- 오늘의 북 워킹(하루 한 번 말풍선, 음성은 버튼을 눌렀을 때만) ----------
+let tipData = null, tipAudio = null, tipUrl = null;
+const dailyKey = () => 'bookwalking.dailyAt.' + (state.auth?.user?.id ?? '');
+let tipClosed = false;
+function hideTipView() { $('#todayTip').hidden = true; }
+function hideTip() { tipClosed = true; $('#todayTip').hidden = true; if (tipAudio) tipAudio.pause(); }
+async function showDailyTip() {
+  if (!state.auth || aiLocked || localStorage.getItem(dailyKey()) === kstDate(0)) return;
+  try {
+    const t = await api('/v1/suggest/daily', { timeoutMs: 30000 });
+    if (!t?.available || !state.auth) return;
+    localStorage.setItem(dailyKey(), kstDate(0)); tipData = t;
+    $('#todayTipBadge').textContent = `🚶 오늘의 북 워킹 · ${t.basisLabel}`;
+    $('#todayTipText').textContent = t.text; $('#todayTipSrc').textContent = '출처: ' + t.source;
+    $('#todayTipVoice').hidden = !(t.voice && t.speechId); $('#todayTipVoice').textContent = '🔊 듣기';
+    if (tipUrl) { URL.revokeObjectURL(tipUrl); tipUrl = null; tipAudio = null; }
+    tipClosed = false; $('#todayTip').hidden = !document.querySelector('#tab-plan').classList.contains('active');
+  } catch { /* 부가 기능: 실패하면 보이지 않음 */ }
+}
+$('#todayTipClose').onclick = hideTip;
+$('#todayTipMore').onclick = () => { const a = tipData?.action; hideTip(); if (!a) return; $('#origin').value = a.origin; sel.situation = a.situation; sel.date = 'today'; drawForm(); $('#planForm').requestSubmit(); };
+$('#todayTipVoice').onclick = async () => {
+  const b = $('#todayTipVoice');
+  if (tipAudio && !tipAudio.paused) { tipAudio.pause(); tipAudio.currentTime = 0; b.textContent = '🔊 듣기'; return; }
+  if (!tipAudio) {
+    b.disabled = true; b.textContent = '불러오는 중…';
+    try {
+      const r = await fetch(`${state.api}/v1/tts/${tipData.speechId}`, { headers: { Authorization: 'Bearer ' + state.auth.token }, signal: AbortSignal.timeout(60000) });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || '음성을 불러오지 못했습니다'); }
+      tipUrl = URL.createObjectURL(await r.blob()); tipAudio = new Audio(tipUrl); tipAudio.onended = () => { b.textContent = '🔊 다시 듣기'; };
+    } catch (e) { b.disabled = false; b.textContent = '🔊 듣기'; return toast(e.message); }
+    b.disabled = false;
+  }
+  try { await tipAudio.play(); b.textContent = '⏹ 멈추기'; } catch { b.textContent = '🔊 듣기'; toast('소리를 재생하지 못했습니다. 무음 모드인지 확인해 주세요.'); }
+};
+
+// ---------- 내 기록(최근 30일 플랜) ----------
+const WD = ['일', '월', '화', '수', '목', '금', '토'];
+const kst = iso => { const d = new Date(new Date(iso).getTime() + 9 * 3600e3); return { date: `${d.getUTCFullYear()}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.${String(d.getUTCDate()).padStart(2, '0')}(${WD[d.getUTCDay()]})`, time: d.toISOString().slice(11, 16) }; };
+async function loadHistory() {
+  const box = $('#history'); box.innerHTML = '<p class="loading">기록을 불러오는 중…</p>';
+  try {
+    const { plans } = await api('/v1/me/plans?limit=100');
+    if (!plans.length) { box.innerHTML = '<p class="empty">아직 만든 북 워킹이 없습니다. 오늘 탭에서 첫 북 워킹을 만들어 보세요!</p>'; return; }
+    const days = {}; for (const p of plans) (days[kst(p.created_at).date] ??= []).push(p);
+    box.innerHTML = Object.entries(days).map(([d, ps], i) => `<details class="hist-day"${i === 0 ? ' open' : ''}><summary><b>${esc(d)}</b><span class="muted">북 워킹 ${ps.length}개</span></summary>${ps.map(p => `
+      <div class="hist-item">${safeUrl(p.cover) ? `<img src="${esc(p.cover)}" alt="" loading="lazy">` : '<div></div>'}<div>
+        <div class="muted small-text">${esc(kst(p.created_at).time)} · ${esc(p.trip_date)} · ${esc(p.emoji ?? '')} ${esc(p.situation_label ?? p.situation ?? '')}</div>
+        <b>${esc(p.sigungu ?? '')}</b> <span class="tag ${p.gate}">${esc(p.gate_name ?? p.gate ?? '')} ${p.score ?? ''}</span>
+        <div class="small-text">${esc(p.course ?? '동네 산책')}${p.book ? ` · 『${esc(p.book)}』` : ''}${p.has_script ? ' · 🎧' : ''}</div>
+        <div class="acts"><button type="button" class="ghost small" data-view="${p.id}">다시 보기</button><button type="button" class="ghost small" data-again="${p.id}" data-place="${esc(p.sigungu ?? '')}" data-sit="${esc(p.situation ?? '')}" data-comp="${esc(p.companion ?? '')}">오늘 다시</button></div>
+      </div></div>`).join('')}</details>`).join('') + '<p class="muted small-text">플랜은 서비스 개선과 운영을 위해 30일간 보관된 뒤 자동으로 지워집니다.</p>';
+    box.querySelectorAll('[data-view]').forEach(b => b.onclick = async () => { try { const r = await api('/v1/plans/' + b.dataset.view); lastPlan = { id: r.id, plan: r.plan, voice: true }; go('plan'); renderPlan(lastPlan); } catch (e) { toast(e.message); } });
+    box.querySelectorAll('[data-again]').forEach(b => b.onclick = () => { $('#origin').value = b.dataset.place; sel.situation = b.dataset.sit || null; sel.companion = ['solo', 'pair', 'family', 'group'].includes(b.dataset.comp) ? b.dataset.comp : null; sel.date = 'today'; go('plan'); drawForm(); $('#planForm').requestSubmit(); });
+  } catch (e) { box.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
+}
+$('#btnHistory').onclick = () => go('history');
+
+// ---------- 의견 보내기(별점 선택 + 500자, 하루 5번) ----------
+let rating = null;
+function setRating(v) { rating = rating === v ? null : v; document.querySelectorAll('.star').forEach(b => { b.classList.toggle('on', !!rating && Number(b.dataset.v) <= rating); b.setAttribute('aria-pressed', String(Number(b.dataset.v) === rating)); }); }
+document.querySelectorAll('.star').forEach(b => b.onclick = () => setRating(Number(b.dataset.v)));
+$('#opinionText').addEventListener('input', () => { $('#opinionCount').textContent = `${$('#opinionText').value.length}/500`; });
+$('#opinionForm').onsubmit = async e => {
+  e.preventDefault(); const text = $('#opinionText').value.trim(), m = $('#opinionMsg');
+  if (!text) { m.textContent = '의견을 한 줄이라도 적어 주세요.'; return; }
+  $('#opinionSend').disabled = true; m.textContent = '';
+  try { await api('/v1/opinions', { method: 'POST', body: JSON.stringify({ rating, text }) }); $('#opinionText').value = ''; $('#opinionCount').textContent = '0/500'; rating = null; setRating(null); go('plan'); toast('소중한 의견 감사합니다! 더 나은 북 워킹으로 보답할게요.'); }
+  catch (err) { m.textContent = err.message || '의견을 보내지 못했습니다. 잠시 뒤 다시 시도해 주세요.'; }
+  finally { $('#opinionSend').disabled = false; }
+};
+
+// ---------- 계정 설정·사용량·AI 잠금 ----------
+const ROLE = { admin: '관리자', tester: '내부 테스터', user: '베타 테스터' };
+let usage = null, aiLocked = false;
+async function refreshUsage() {
+  try {
+    const me = await api('/v1/auth/me', { timeoutMs: 10000 });
+    if (!me.user) return;
+    syncExpiry(me.remainingSec);
+    usage = { session: me.session?.messages ?? 0, sessionLimit: me.limits.sessionMessages, today: me.usage.today.messages, todayLimit: me.limits.dailyMessages, logins: me.usage.today.sessions, loginLimit: me.limits.dailySessions, role: me.role };
+    applyAiLock(me.ai);
+  } catch { /* 401 은 자동 로그아웃 처리 */ }
+}
+function applyAiLock(ai) {
+  aiLocked = ai && ai.available === false && state.auth?.user?.role !== 'admin';
+  $('#aiLock').hidden = !aiLocked; if (aiLocked) { $('#aiLockMsg').textContent = ai.message || '지금은 AI 이용량이 모두 소진되어 잠시 이용할 수 없습니다.'; hideTip(); }
+  $('#btnPlan').disabled = !!aiLocked;
+}
+async function openSettings() {
+  await refreshUsage();
+  const a = state.auth; if (!a) return;
+  $('#accountInfo').textContent = `${a.user.displayName}(${a.user.loginId}) · ${ROLE[a.user.role] ?? a.user.role} · 남은 시간 ${Math.floor(remaining() / 60)}분 ${remaining() % 60}초`;
+  $('#usageInfo').textContent = usage ? `이번 로그인 ${usage.session}/${usage.sessionLimit}건 · 오늘 ${usage.today}/${usage.todayLimit}건 · 오늘 로그인 ${usage.logins}/${usage.role === 'user' ? usage.loginLimit + '회' : '제한 없음'}` : '';
+  $('#adminLink').hidden = a.user.role !== 'admin';
+  $('#settingsDialog').showModal();
+}
+$('#btnSettings').onclick = openSettings;
+$('#btnHistory2').onclick = () => { $('#settingsDialog').close(); go('history'); };
+$('#btnPlaces').onclick = openPlaces;
+$('#btnPw').onclick = () => { $('#settingsDialog').close(); openPw(false); };
+function showNotice(title, msg) { const d = $('#noticeDialog'); if (d.open) return; $('#noticeTitle').textContent = title; $('#noticeMsg').textContent = msg; try { d.showModal(); } catch { /* 로그인 화면 문구로 안내 */ } }
+
+// ---------- 로그인 위치(허용한 경우만 세션당 1회, 서버가 약 100m 단위로 저장·30일 보관) ----------
+function recordLoginLocation() {
+  const sid = state.auth?.token?.slice(-12); if (!sid || sessionStorage.getItem('bookwalking.locAsked') === sid) return;
+  sessionStorage.setItem('bookwalking.locAsked', sid);
+  const post = body => api('/v1/auth/location', { method: 'POST', body: JSON.stringify(body), timeoutMs: 10000 }).catch(() => {});
+  if (!navigator.geolocation) return post({ status: 'unavailable' });
+  navigator.geolocation.getCurrentPosition(p => post({ status: 'granted', lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy }), e => post({ status: e.code === 1 ? 'denied' : 'unavailable' }), { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+}
+
+// ---------- 무응답 자동 로그아웃: 15분(14분에 경고). 플랜을 만드는 중·음성 재생 중은 사용 중으로 본다 ----------
+const IDLE_MS = 15 * 60 * 1000, IDLE_WARN_MS = 14 * 60 * 1000;
+let lastActive = Date.now(), idleWarned = false;
+const markActive = () => { lastActive = Date.now(); idleWarned = false; };
+['pointerdown', 'touchstart', 'keydown', 'input', 'wheel', 'scroll'].forEach(ev => window.addEventListener(ev, markActive, { passive: true, capture: true }));
+const audioPlaying = () => [...document.querySelectorAll('audio')].some(a => !a.paused) || (tipAudio && !tipAudio.paused);
+setInterval(() => {
+  if (!state.auth) { markActive(); return; }
+  if (audioPlaying() || $('#btnPlan').textContent.includes('모으는 중')) { markActive(); return; }
+  const idle = Date.now() - lastActive;
+  if (idle >= IDLE_MS) { endSession('15분 동안 사용이 없어 자동 로그아웃했습니다.', 'idle'); showNotice('자동 로그아웃되었습니다', '15분 동안 사용이 없어 안전을 위해 로그아웃했습니다.\n다시 로그인해 주세요.'); }
+  else if (idle >= IDLE_WARN_MS && !idleWarned) { idleWarned = true; toast('1분 동안 사용이 없으면 자동 로그아웃됩니다. 화면을 터치하면 계속 이용할 수 있어요.', 8000); }
+}, 15000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') lastActive = Math.min(lastActive, Date.now()); });
+
 // ---------- 로그인 ----------
 function showLogin(msg = '') {
-  timer?.stop(); $('#appView').hidden = true; $('#loginView').hidden = false; $('#loginMsg').textContent = msg;
+  timer?.stop(); timer = null; hideTip(); applyAiLock(null);
+  for (const d of ['#settingsDialog', '#placesDialog', '#pwDialog', '#logoutDialog']) if ($(d).open) $(d).close();
+  $('#appView').hidden = true; $('#loginView').hidden = false; $('#loginMsg').textContent = msg; $('#btnAdmin').hidden = true;
+  $('#sessionMinutesNote').textContent = state.sessionMinutes ?? 30;
   const id = localStorage.getItem('bookwalking.loginId'); if (id) { $('#loginId').value = id; $('#rememberId').checked = true; }
 }
+let ending = false;
+function endSession(msg, reason = 'logout') { if (ending) return; ending = true; logout(reason); lastPlan = null; $('#planResult').innerHTML = ''; showLogin(msg); ending = false; }
 async function showApp() {
   $('#loginView').hidden = true; $('#appView').hidden = false;
   if (!situations.length) { try { situations = (await api('/v1/situations', { noAuth: true })).situations; } catch { situations = []; } }
   drawForm();
+  if (!state.auth) return;
   syncAdmin();
-  if (state.auth) timer = startTimer($('#timer'), { onWarn: () => toast('1분 뒤 자동 로그아웃됩니다'), onExpire: () => { logout('expired'); showLogin('이용 시간이 끝나 로그아웃했습니다. 다시 로그인해 주세요.'); } });
-  if (state.auth?.user?.mustChangePassword) openPw();
+  markActive();
+  timer?.stop();
+  timer = startTimer($('#timer'), { onWarn: () => toast('1분 뒤 자동 로그아웃됩니다. 필요한 내용은 지금 확인해 주세요.', 8000), onExpire: () => { const min = sessionMinutes(); endSession(`${min}분 이용 시간이 끝나 로그아웃했습니다.`, 'expired'); showNotice('이용 시간이 끝났습니다', `로그인 1회에 ${min}분 이용할 수 있습니다.\n이용해 주셔서 감사합니다.`); } });
+  if (state.auth.user?.mustChangePassword) openPw(true);
+  refreshUsage();
+  loadPlaces().then(showDailyTip);
+  recordLoginLocation();
 }
 /** 관리자 계정이면 상단에 관리자 페이지 버튼(같은 탭 세션을 그대로 쓴다) */
 async function syncAdmin() {
   const btn = $('#btnAdmin'); btn.hidden = state.auth?.user?.role !== 'admin';
   try { const me = await api('/v1/auth/me'); const role = me.role ?? me.user?.role; btn.hidden = role !== 'admin'; if (state.auth?.user) saveAuth({ ...state.auth, user: { ...state.auth.user, role } }); } catch { /* 표시만 영향 */ }
 }
-function openPw() { $('#pwMsg').textContent = ''; $('#pwDialog').showModal(); }
+function openPw(forced = true) {
+  $('#pwMsg').textContent = ''; $('#pwCur').value = ''; $('#pwNew').value = ''; $('#pwNew2').value = '';
+  $('#pwReason').textContent = forced ? '처음 로그인했거나 관리자가 초기화한 계정입니다. 새 비밀번호를 정해 주세요.' : '지금 비밀번호와 새 비밀번호를 입력해 주세요.';
+  $('#pwCancel').hidden = forced; $('#pwDialog').showModal();
+}
+$('#pwCancel').onclick = () => $('#pwDialog').close();
+$('#pwDialog').addEventListener('cancel', e => { if ($('#pwCancel').hidden) e.preventDefault(); }); // 첫 로그인 변경은 닫지 못하게
 $('#pwForm').onsubmit = async e => {
   e.preventDefault();
+  if ($('#pwNew').value !== $('#pwNew2').value) { $('#pwMsg').textContent = '새 비밀번호 두 칸이 서로 다릅니다'; return; }
   try {
     const r = await api('/v1/auth/password', { method: 'POST', body: JSON.stringify({ current: $('#pwCur').value, next: $('#pwNew').value }) });
     if (r.token) saveAuth({ ...state.auth, token: r.token });
@@ -209,12 +380,23 @@ $('#loginForm').onsubmit = async e => {
     await login(id, $('#loginPw').value);
     if ($('#rememberId').checked) localStorage.setItem('bookwalking.loginId', id); else localStorage.removeItem('bookwalking.loginId');
     $('#loginPw').value = ''; await showApp();
-  } catch (err) { $('#loginMsg').textContent = err.message; }
-  finally { btn.disabled = false; }
+  } catch (err) {
+    if (err.code === 'ACTIVE_SESSION') { $('#loginPw').value = ''; showNotice('다른 기기에서 이용 중이에요', err.message); }
+    else if (err.code === 'LOGIN_DAILY_LIMIT') showNotice('오늘 로그인 횟수를 모두 쓰셨어요', err.message);
+    else $('#loginMsg').textContent = err.message;
+  } finally { btn.disabled = false; }
 };
-$('#btnLogout').onclick = () => { logout(); $('#btnAdmin').hidden = true; showLogin('로그아웃했습니다.'); };
-setOnAuthLost(msg => showLogin(msg || '다시 로그인해 주세요'));
-setOnMustChange(openPw);
+// 로그아웃: 확인 창 먼저(확인 = 로그아웃, 취소 = 그대로)
+$('#btnLogout').onclick = () => {
+  const d = $('#logoutDialog'), role = state.auth?.user?.role;
+  const left = usage && role === 'user' ? Math.max(0, usage.loginLimit - usage.logins) : null;
+  $('#logoutMsg').textContent = role === 'user' ? `오늘도 북 워킹을 이용해 주셔서 감사합니다.\n오늘 남은 로그인은 ${left ?? '-'}회입니다(하루 ${usage?.loginLimit ?? 3}회).` : '이용해 주셔서 감사합니다.\n필요하실 때 언제든 다시 로그인해 주세요.';
+  d.returnValue = 'cancel';
+  d.onclose = () => { if (d.returnValue === 'ok') endSession('로그아웃했습니다.'); else markActive(); };
+  d.showModal();
+};
+setOnAuthLost(msg => endSession(msg || '다시 로그인해 주세요', 'lost'));
+setOnMustChange(() => openPw(true));
 
 (async () => {
   const h = await health();

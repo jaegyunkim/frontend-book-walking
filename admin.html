@@ -1,13 +1,31 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>북 워킹 · 관리자</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=0.1.2"><style>.adm{max-width:960px;margin:0 auto;padding:20px 16px 60px}.adm table{width:100%;border-collapse:collapse;font-size:13px}.adm th{font-family:var(--mono);font-size:11px;font-weight:500;text-align:left;color:var(--mute);border-bottom:2px solid var(--ink);padding:6px 8px 6px 0}.adm td{border-bottom:1px solid var(--hair);padding:8px 8px 8px 0;vertical-align:top}.adm .sec{margin-top:28px}.adm .actions button{margin-right:4px}.scroll{overflow-x:auto}@media (max-width:720px){.adm thead{display:none}.adm table,.adm tbody,.adm tr,.adm td{display:block;width:100%}.adm tr{border-bottom:1px solid var(--hair);padding:10px 0}.adm td{border:0;padding:3px 0;display:flex;gap:10px;font-size:14px;word-break:break-all}.adm td::before{content:attr(data-label);flex:0 0 76px;color:var(--mute);font-family:var(--mono);font-size:11.5px;padding-top:2px}.adm td[data-label='']::before,.adm td:not([data-label])::before{display:none}.adm .actions{padding-top:6px}.adm header a{min-height:44px;display:inline-flex;align-items:center}}</style></head>
-<body><div class="adm"><header class="row" style="justify-content:space-between;border-bottom:2px solid var(--ink);padding-bottom:10px"><div><p class="eyebrow">BOOK WALKING · ADMIN</p><h1 style="margin:0;font-size:24px">관리자</h1></div><a href="./">← 서비스로</a></header>
-<p id="admMsg" class="msg"></p>
-<div id="admBody" hidden>
-<div class="metric-strip" id="admMetrics"></div>
-<section class="sec"><h2>이용 신청</h2><div class="scroll"><table><thead><tr><th>신청일</th><th>이메일</th><th>닉네임</th><th>상태</th><th></th></tr></thead><tbody id="regRows"></tbody></table></div></section>
-<section class="sec"><h2>사용자</h2><div class="scroll"><table><thead><tr><th>아이디</th><th>이름</th><th>역할</th><th>상태</th><th>오늘</th><th>최근 로그인</th><th></th></tr></thead><tbody id="userRows"></tbody></table></div></section>
-<section class="sec"><h2>최근 북 워킹 플랜</h2><div class="scroll"><table><thead><tr><th>시각</th><th>날짜</th><th>지역</th><th>상황</th><th>지수</th><th>코스</th><th>책</th></tr></thead><tbody id="planRows"></tbody></table></div></section>
-<section class="sec"><h2>운영</h2><div class="row" style="flex-wrap:wrap"><button class="ghost" id="btnSync" type="button">두루누비 코스 지금 동기화</button><button class="ghost" id="btnReport" type="button">오늘 운영 리포트 만들기</button><button class="ghost" id="btnRecheck" type="button">AI 잠금 해제</button></div><pre id="opsOut" class="muted" style="white-space:pre-wrap;font-family:var(--mono);font-size:12px"></pre></section>
-</div></div>
-<script src="config.js?v=0.1.2"></script><script src="admin.js?v=0.1.2" type="module"></script></body></html>
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FFFFFF">
+  <meta name="robots" content="noindex">
+  <title>북 워킹 · 관리자</title>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin-base.css?v=0.1.4">
+  <link rel="stylesheet" href="admin.css?v=0.1.4">
+</head>
+<body>
+  <div class="admin">
+    <header class="top">
+      <div class="brand"><img src="assets/icon.svg" alt="" width="30" height="30"><div><h1>북 워킹 관리자</h1><p id="who">확인 중…</p></div></div>
+      <div class="top-right"><span id="timer" class="timer" hidden>30:00</span><a id="userPageLink" class="link-btn" href="./" hidden>서비스 화면으로</a></div>
+    </header>
+    <nav class="atabs" id="atabs">
+      <button data-v="requests">가입 승인</button><button data-v="model">AI 연결</button><button data-v="users" class="active">사용자</button><button data-v="sessions">세션</button><button data-v="usage">사용량</button>
+      <button data-v="chats">대화 로그</button><button data-v="logins">로그인 기록</button><button data-v="reports">리포트</button><button data-v="plans">플랜·코스</button><button data-v="opinions">의견 보내기</button><button data-v="actions">작업 기록</button>
+    </nav>
+    <div id="msg" class="toast" hidden></div>
+    <main id="view" class="aview"><p class="sub">불러오는 중…</p></main>
+  </div>
+  <dialog id="dlg"><form method="dialog" class="settings" id="dlgForm"></form></dialog>
+  <script src="config.js?v=0.1.4"></script><script src="telemetry.js?v=0.1.4"></script>
+  <script src="admin.js?v=0.1.4" type="module"></script>
+</body>
+</html>
