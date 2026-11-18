@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.3';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.4';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.3';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.4';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -517,7 +517,6 @@ setOnMustChange(() => openPw(true));
 
 (async () => {
   const h = await health();
-  $('#serverLine').textContent = h.error ? `서버 미연결: ${state.api || '주소 없음'} (${h.error})` : `서버 연결됨 · ${state.api} · v${h.version}`;
   if (h.error) return showLogin('서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.');
   if (state.authMode === 'off' || state.auth) return showApp();
   showLogin();
