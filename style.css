@@ -537,3 +537,10 @@ body { word-break: keep-all; overflow-wrap: anywhere; } /* 한국어는 낱말 �
 .login-hero { object-position: 25% 60%; -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent); mask-image: linear-gradient(to bottom, #000 72%, transparent); }
 /* v0.4.6 로그인 배너: 처음의 단순한 평면 그림(언덕·산책길·나무·해·펼친 책)으로 되돌림 — 흐림 처리 없이 또렷하게 */
 .login-hero { height: 170px; object-position: center; -webkit-mask-image: none; mask-image: none; }
+/* 지도·길찾기 링크를 버튼으로 v0.4.7 — '목적지 상세'와 같은 모양(흰 바탕·테두리·12px 모서리) */
+.links { gap: 8px; align-items: center; }
+.links a, .dest-links a.link-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; margin: 0; border: 1px solid var(--hair); border-radius: var(--r-sm); background: #fff; color: var(--accent-text); font-size: 14px; font-weight: 700; text-decoration: none; box-shadow: 0 1px 0 rgba(31,42,36,.06); }
+.links a:active, .dest-links a.link-btn:active { background: var(--accent-soft); }
+.links .ghost { min-height: 44px; }
+.dest-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.links > * { margin: 0 !important; } .links .ghost { font-size: 14px; padding: 0 14px; }

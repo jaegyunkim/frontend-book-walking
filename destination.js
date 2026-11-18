@@ -85,7 +85,7 @@ export function createDestinationDialog(doc, api) {
     ++version; active = { origin: pointOf(plan.origin), item };
     el('destTitle').textContent = item.name;
     const url = mapUrl(item), link = placeLink(item);
-    el('destInfo').innerHTML = `<p>${esc(item.kind)}</p><p class="muted" id="destAddress">${esc(item.address || item.sigun || '')}</p><p id="destOverview">${esc(item.summary || item.line || '')}</p><p id="destPhone" class="muted">${item.tel ? '문의: ' + esc(item.tel) : ''}</p>${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">목적지 지도</a>` : ''}${link && link !== url ? ` · <a href="${esc(link)}" target="_blank" rel="noopener noreferrer">장소 정보</a>` : ''}`;
+    el('destInfo').innerHTML = `<p>${esc(item.kind)}</p><p class="muted" id="destAddress">${esc(item.address || item.sigun || '')}</p><p id="destOverview">${esc(item.summary || item.line || '')}</p><p id="destPhone" class="muted">${item.tel ? '문의: ' + esc(item.tel) : ''}</p>${url || (link && link !== url) ? `<div class="dest-links">${url ? `<a class="link-btn" href="${esc(url)}" target="_blank" rel="noopener noreferrer">목적지 지도</a>` : ''}${link && link !== url ? `<a class="link-btn" href="${esc(link)}" target="_blank" rel="noopener noreferrer">장소 정보</a>` : ''}</div>` : ''}`;
     el('destFrom').textContent = active.origin ? `출발지: ${plan.origin.label || plan.place || `${active.origin.lat}, ${active.origin.lon}`}` : `이전 기록에 출발지 좌표가 없어요. 출발지를 확인한 뒤 조회하세요.`;
     originInput.disabled = el('destOriginField').hidden = !!active.origin;
     originInput.value = active.origin ? '' : plan.origin?.label || plan.place || '';
