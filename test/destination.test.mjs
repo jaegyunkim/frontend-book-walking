@@ -17,7 +17,7 @@ test('휘발유·전기차 입력, 무료 충전 및 서버 기본값 검증', (
 test('편도/왕복·경로와 추정을 구분하고 주변 장소와 빈 목록·장애를 별개로 안내', () => {
   const data={travel:{mode:'car',timeSource:'estimate',minutes:45,distanceKm:29,toll:0,fuel:{type:'ev',oneWayKrw:2030,estimateKrw:4060}},radiusM:5000,attractions:[{...item,name:'<공원>',address:'한길',url:'javascript:void(0)'}],lodgings:[],nearbyStatus:{lodgings:'unavailable'}};
   const html=resultHtml(data); for(const fragment of ['45분','추정','충전비','편도 2,030원','왕복 4,060원','별도): 0원','5km 관광지','5km 숙박','&lt;공원&gt;','한길','제공처에서','https://map.kakao.com']) assert.ok(html.includes(fragment),fragment);
-  assert.ok(!html.includes('javascript:')); assert.match(resultHtml({travel:{mode:'walk',minutes:null}}), /시간 정보 없음/); assert.match(resultHtml({}),/찾은 장소가 없습니다/);
+  assert.ok(!html.includes('javascript:')); assert.match(resultHtml({travel:{mode:'walk',minutes:null}}), /시간 정보가 없어요/); assert.match(resultHtml({}),/찾은 장소가 없어요/);
 });
 test('이전 목적지의 늦은 응답을 무시하고 과거 플랜 출발지 확인 전에는 조회하지 않음', async()=>{
   const m=new Map(); const el=id=>{ if(!m.has(id))m.set(id,{open:false,showModal(){this.open=true;},close(){this.open=false;this.onclose();}});return m.get(id);};

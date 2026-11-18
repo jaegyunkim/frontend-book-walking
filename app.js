@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.14';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.4.0';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.14';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.4.0';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -42,7 +42,7 @@ let locating = false;
 const originValue = () => { const v = $('#origin').value.trim(); return here && v === here.label ? here.coords : v; };
 function setOrigin(v) { $('#origin').value = String(v ?? '').trim(); renderPlaces(); }
 function locateHere() {
-  if (!navigator.geolocation) return toast('이 기기에서는 위치를 쓸 수 없습니다. 주소로 추가해 주세요');
+  if (!navigator.geolocation) return toast('이 기기에서는 위치를 쓸 수 없어요. 주소로 추가해 주세요');
   if (locating) return; locating = true; renderPlaces();
   navigator.geolocation.getCurrentPosition(async p => {
     const lat = p.coords.latitude.toFixed(4), lon = p.coords.longitude.toFixed(4), coords = `${lat},${lon}`;
@@ -88,7 +88,7 @@ $('#planForm').onsubmit = async e => {
   if (!skip && !(await askBeforePlan())) return;
   localStorage.setItem('bookwalking.origin', $('#origin').value.trim());
   const btn = $('#btnPlan'); btn.disabled = true; btn.textContent = '데이터 모으는 중…';
-  const steps = ['기상청 예보', '에어코리아 미세먼지', '두루누비 걷기길', '예스24 상황별 베스트', 'Jev 도서 매칭', '주변 서점·관광지'];
+  const steps = ['기상청 예보', '에어코리아 미세먼지', '두루누비 걷기길', '예스24 상황별 베스트', 'AI 도서 추천', '주변 서점·관광지'];
   let i = 0; $('#planResult').innerHTML = `<div class="loading">북 워킹을 만들고 있어요 · <b id="stepName">${steps[0]}</b></div>`;
   const tick = setInterval(() => { i = (i + 1) % steps.length; const s = $('#stepName'); if (s) s.textContent = steps[i]; }, 900);
   try {
@@ -98,7 +98,7 @@ $('#planForm').onsubmit = async e => {
   finally { clearInterval(tick); btn.disabled = false; btn.textContent = '북 워킹 만들기'; }
 };
 
-// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.3.14): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
+// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.4.0): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
 const WX_ICON = {
   sun: '<circle cx="12" cy="12" r="4.2" class="i-sun"/><path class="i-ray" d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
   moon: '<path class="i-moon" d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>',
@@ -141,17 +141,17 @@ function renderPlan({ id, plan: p, voice }) {
     <div class="card-lines">${p.card.map(l => `<p>${esc(l)}</p>`).join('')}</div>
     ${weatherCard(w, hours)}
     <div class="audio" id="audioBox"><h3>🎧 2분 오디오 워킹</h3><p class="muted">날씨·코스·책을 엮은 대본을 AI가 쓰고 음성으로 읽어 드려요. 걷기 직전에 들어 보세요.</p><button class="primary" type="button" id="btnScript">오디오 워킹 만들기</button></div>
-    <div class="sec"><h3>📚 오늘의 책 <small>${esc(p.situation.emoji)} ${esc(p.situation.label)} · 예스24 베스트</small></h3>${p.books.map(b => bookHtml(b, p.situation.id)).join('') || '<p class="empty">책을 불러오지 못했습니다</p>'}</div>
-    <div class="sec"><h3>🚶 걷기 코스 <small>두루누비 · 출발지 반경 ${p.courseSearch?.radiusKm ?? '-'}km</small></h3>${courses.map((c, i) => courseHtml(c, i, detailButton(c, '걷기 코스 시작점', c.start ?? null))).join('') || '<p class="empty">가까운 코리아둘레길 코스가 없습니다</p>'}</div>
+    <div class="sec"><h3>📚 오늘의 책 <small>${esc(p.situation.emoji)} ${esc(p.situation.label)} · 예스24 베스트</small></h3>${p.books.map(b => bookHtml(b, p.situation.id)).join('') || '<p class="empty">책을 불러오지 못했어요</p>'}</div>
+    <div class="sec"><h3>🚶 걷기 코스 <small>두루누비 · 출발지 반경 ${p.courseSearch?.radiusKm ?? '-'}km</small></h3>${courses.map((c, i) => courseHtml(c, i, detailButton(c, '걷기 코스 시작점', c.start ?? null))).join('') || '<p class="empty">가까운 코리아둘레길 코스가 없어요</p>'}</div>
     ${nearbyList((p.nearby.parks ?? []).filter(x => !/화장실|주차장|매점|관리사무소/.test(x.name + x.category)), '🌳 동네 산책', '출발지 3km 안 공원')}
     ${nearbyList(p.indoor, '☔ 실내에서 읽기', '도서관·북카페')}
     ${nearbyList(p.nearby.bookstores, '🏬 코스 근처 서점', '카카오 로컬')}
     ${nearbyList(p.nearby.spots, '📍 코스 근처 관광지', '한국관광공사')}
     ${p.nearby.camps?.length ? `<div class="sec"><h3>🏕️ 근처 캠핑장 <small>한국관광공사 고캠핑</small></h3><ul class="places">${p.nearby.camps.map(c => `<li><span>${safeUrl(c.homepage) ? `<a href="${esc(c.homepage)}" target="_blank" rel="noopener">${esc(c.name)}</a>` : esc(c.name)} <small class="muted">${esc(c.type ?? '')}</small><br><small class="muted">${esc(c.address ?? '')}</small><br>${detailButton(c, '캠핑장')}</span><a class="d" href="https://map.kakao.com/link/to/${encodeURIComponent(c.name)},${c.lat},${c.lon}" target="_blank" rel="noopener">길찾기</a></li>`).join('')}</ul></div>` : ''}
-    ${p.drive ? `<div class="sec"><h3>🚗 캠핑장까지 <small>카카오모빌리티·오피넷·ITS</small></h3><p>${esc(p.drive.to)}까지 약 <b>${p.drive.distanceKm ?? '-'}km · ${p.drive.minutes ?? '-'}분</b>${p.drive.toll ? `, 통행료 ${p.drive.toll.toLocaleString()}원` : ''}${p.drive.fuel ? `, 왕복 기름값 약 ${p.drive.fuel.estimateKrw.toLocaleString()}원` : ''}</p>${p.drive.fuel ? `<p class="muted">${esc(p.drive.fuel.basis)} (휘발유 ${p.drive.fuel.price}원/L)</p>` : ''}${p.drive.incidents.length ? `<ul class="reasons">${p.drive.incidents.slice(0, 3).map(x => `<li>${esc(x.road ?? '')} ${esc(x.type ?? '')}: ${esc(x.message)}</li>`).join('')}</ul>` : '<p class="muted">경로 주변 돌발상황 없음(현재 기준)</p>'}</div>` : ''}
+    ${p.drive ? `<div class="sec"><h3>🚗 캠핑장까지 <small>카카오모빌리티·오피넷·ITS</small></h3><p>${esc(p.drive.to)}까지 약 <b>${p.drive.distanceKm ?? '-'}km · ${p.drive.minutes ?? '-'}분</b>${p.drive.toll ? `, 통행료 ${p.drive.toll.toLocaleString()}원` : ''}${p.drive.fuel ? `, 왕복 기름값 약 ${p.drive.fuel.estimateKrw.toLocaleString()}원` : ''}</p>${p.drive.fuel ? `<p class="muted">${esc(p.drive.fuel.basis)} (휘발유 ${p.drive.fuel.price}원/L)</p>` : ''}${p.drive.incidents.length ? `<ul class="reasons">${p.drive.incidents.slice(0, 3).map(x => `<li>${esc(x.road ?? '')} ${esc(x.type ?? '')}: ${esc(x.message)}</li>`).join('')}</ul>` : '<p class="muted">가는 길에 사고·공사 소식은 없어요(현재 기준)</p>'}</div>` : ''}
     ${p.crowd ? `<div class="sec"><h3>👥 방문 혼잡 <small>${esc(p.crowd.note)}</small></h3><p>${esc(p.crowd.name)} 같은 요일 평균 방문자는 평소의 <b>${Math.round(p.crowd.ratio * 100)}%</b> — ${esc(p.crowd.crowd)}</p></div>` : ''}
     ${p.weather.message ? `<details class="sec"><summary>기상청 예보관 통보문</summary><p class="muted" style="white-space:pre-line">${esc(p.weather.message)}</p></details>` : ''}
-    <div class="sources">${p.sources.map(x => `<span class="${x.status === 'ok' ? '' : 'bad'}">${esc(x.provider)} ${x.status === 'ok' ? '✓' : esc(x.status)}</span>`).join('')}<p>${esc(p.attribution)}</p><p>AI: Jev 상황 분류 ${esc(p.ai.jev.status)} · 도서 재순위화 ${esc(p.ai.rerank.status)}${p.ai.rerank.model ? ` (${esc(p.ai.rerank.model)})` : ''}</p></div>`;
+    <div class="sources">${p.sources.map(x => `<span class="${x.status === 'ok' ? '' : 'bad'}">${esc(x.provider)} ${x.status === 'ok' ? '✓' : esc(x.status)}</span>`).join('')}<p>${esc(p.attribution)}</p><p>AI 상황 고르기 ${esc(p.ai.jev.status)} · 책 순서 맞추기 ${esc(p.ai.rerank.status)}${p.ai.rerank.model ? ` (${esc(p.ai.rerank.model)})` : ''}</p></div>`;
   $('#planResult').querySelectorAll('[data-destination]').forEach(b => b.onclick = () => openDestination(p, destinations[Number(b.dataset.destination)]));
   $('#btnScript').onclick = () => makeAudio(id, voice);
   $('#planResult').querySelectorAll('[data-shelf]').forEach(b => b.onclick = () => addShelf(JSON.parse(b.dataset.shelf), b));
@@ -175,7 +175,7 @@ async function makeAudio(id, voice) {
   btn.disabled = true; btn.textContent = '대본 쓰는 중…';
   try {
     const r = await api(`/v1/plans/${id}/script`, { method: 'POST', body: '{}', timeoutMs: 90000 });
-    box.innerHTML = `<h3>🎧 2분 오디오 워킹</h3><p class="script">${esc(r.script)}</p>${r.speechId && voice !== false ? '<button class="primary" type="button" id="btnPlay">음성으로 듣기</button>' : '<p class="muted">음성 합성을 쓸 수 없어 대본만 보여 드립니다.</p>'}`;
+    box.innerHTML = `<h3>🎧 2분 오디오 워킹</h3><p class="script">${esc(r.script)}</p>${r.speechId && voice !== false ? '<button class="primary" type="button" id="btnPlay">음성으로 듣기</button>' : '<p class="muted">음성 합성을 쓸 수 없어 대본만 보여 드려요.</p>'}`;
     const play = $('#btnPlay');
     if (play) play.onclick = async () => {
       play.disabled = true; play.textContent = '음성 만드는 중…(첫 재생은 10초쯤 걸려요)';
@@ -193,7 +193,7 @@ async function loadBooks() {
   const el = $('#bookList'); el.innerHTML = '<p class="loading">예스24 베스트를 불러오는 중…</p>';
   try {
     const r = await api(`/v1/books?situation=${encodeURIComponent(sel.bookSituation)}&age=${$('#bookAge').value}&sex=${$('#bookSex').value}`);
-    el.innerHTML = r.items.slice(0, 20).map(b => bookHtml(b, sel.bookSituation)).join('') || '<p class="empty">책이 없습니다</p>';
+    el.innerHTML = r.items.slice(0, 20).map(b => bookHtml(b, sel.bookSituation)).join('') || '<p class="empty">책이 없어요</p>';
     bindShelf(el);
   } catch (e) { el.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
 }
@@ -201,7 +201,7 @@ $('#bookAge').onchange = loadBooks; $('#bookSex').onchange = loadBooks;
 $('#searchForm').onsubmit = async e => {
   e.preventDefault(); const q = $('#searchQ').value.trim(); if (!q) return loadBooks();
   const el = $('#bookList'); el.innerHTML = '<p class="loading">검색 중…</p>';
-  try { const r = await api('/v1/books/search?q=' + encodeURIComponent(q)); el.innerHTML = r.items.map(b => bookHtml(b, null)).join('') || '<p class="empty">검색 결과가 없습니다</p>'; bindShelf(el); }
+  try { const r = await api('/v1/books/search?q=' + encodeURIComponent(q)); el.innerHTML = r.items.map(b => bookHtml(b, null)).join('') || '<p class="empty">검색 결과가 없어요</p>'; bindShelf(el); }
   catch (err) { el.innerHTML = `<p class="msg">${esc(err.message)}</p>`; }
 };
 const bindShelf = el => el.querySelectorAll('[data-shelf]').forEach(b => b.onclick = () => addShelf(JSON.parse(b.dataset.shelf), b));
@@ -215,7 +215,7 @@ async function loadShelf() {
   const el = $('#shelfList');
   try {
     const r = await api('/v1/me/shelf');
-    el.innerHTML = r.books.map(b => `<div class="book">${safeUrl(b.cover) ? `<img src="${esc(b.cover)}" alt="" loading="lazy">` : '<div></div>'}<div><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author ?? '')}</div><div class="acts">${safeUrl(b.link) ? `<a href="${esc(b.link)}" target="_blank" rel="noopener" class="ghost small yes24" aria-label="예스24에서 ${esc(b.title)} 보기">예스24</a>` : ''}<button class="ghost small" type="button" data-use="${esc(b.title)}">일기 쓰기</button><button class="ghost small" type="button" data-del="${b.itemId}" aria-label="${esc(b.title)} 책장에서 빼기">책장 정리</button></div></div></div>`).join('') || '<p class="empty">아직 담은 책이 없습니다. 오늘 탭에서 추천받은 책을 담아 보세요.</p>';
+    el.innerHTML = r.books.map(b => `<div class="book">${safeUrl(b.cover) ? `<img src="${esc(b.cover)}" alt="" loading="lazy">` : '<div></div>'}<div><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author ?? '')}</div><div class="acts">${safeUrl(b.link) ? `<a href="${esc(b.link)}" target="_blank" rel="noopener" class="ghost small yes24" aria-label="예스24에서 ${esc(b.title)} 보기">예스24</a>` : ''}<button class="ghost small" type="button" data-use="${esc(b.title)}">일기 쓰기</button><button class="ghost small" type="button" data-del="${b.itemId}" aria-label="${esc(b.title)} 책장에서 빼기">책장 정리</button></div></div></div>`).join('') || '<p class="empty">아직 담은 책이 없어요. 오늘 탭에서 추천받은 책을 담아 보세요.</p>';
     el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { await api('/v1/me/shelf/' + b.dataset.del, { method: 'DELETE' }); loadShelf(); });
     el.querySelectorAll('[data-use]').forEach(b => b.onclick = () => { $('#diaryBook').value = b.dataset.use; go('diary'); });
   } catch (e) { el.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
@@ -272,7 +272,7 @@ function renderPlaces() {
   const isHere = Boolean(here && cur && cur === here.label), saved = places.find(p => p.label === cur);
   const temp = cur && !isHere && !saved ? cur : null; // 기록·추천·이번만 쓰기로 정한 출발지(저장 안 된 곳)
   const canSave = !full && (isHere || temp);
-  // 위계 v0.3.14: ① 선택 결과(배너) ② 현재 위치(큰 버튼) ③ 자주 걷는 곳(2칸 타일) ④ 저장·추가(글자 버튼)
+  // 위계 v0.4.0: ① 선택 결과(배너) ② 현재 위치(큰 버튼) ③ 자주 걷는 곳(2칸 타일) ④ 저장·추가(글자 버튼)
   const tile = (attrs, label, on, tag = '') => `<button type="button" class="origin-tile" role="radio" aria-checked="${on}" ${attrs}>${ORIGIN_ICON[on ? 'check' : 'pin']}<span>${esc(label)}</span>${tag}</button>`;
   box.innerHTML =
     `<button type="button" class="origin-gps" role="radio" aria-checked="${isHere}" data-here${locating ? ' aria-busy="true"' : ''}>${ORIGIN_ICON.gps}<span><b>${locating ? '현재 위치 찾는 중…' : '현재 위치'}</b><small>${isHere ? esc(here.label) : '지금 있는 곳에서 출발'}</small></span>${isHere ? ORIGIN_ICON.check : ''}</button>`
@@ -294,7 +294,7 @@ function renderPlaces() {
     else if (await addPlace(temp)) setOrigin(places.find(p => p.selected)?.label ?? cur); else openPlaces(temp);
     renderPlaces();
   };
-  $('#placeList').innerHTML = places.map(p => `<li><span>${p.selected ? '✓ ' : ''}${esc(p.label)}</span><button type="button" class="ghost small" data-del="${p.id}">지우기</button></li>`).join('') || '<li class="muted">아직 저장한 곳이 없습니다.</li>';
+  $('#placeList').innerHTML = places.map(p => `<li><span>${p.selected ? '✓ ' : ''}${esc(p.label)}</span><button type="button" class="ghost small" data-del="${p.id}">지우기</button></li>`).join('') || '<li class="muted">아직 저장한 곳이 없어요.</li>';
   $('#placeList').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { places = (await api(`/v1/me/places/${b.dataset.del}/delete`, { method: 'POST', body: '{}' })).places; renderPlaces(); });
   if ($('#placeAdd')) syncPlaceButtons();
 }
@@ -311,7 +311,7 @@ function loadPostcode() {
   if (window.daum?.Postcode) return Promise.resolve();
   return postcodeLoading ??= new Promise((ok, no) => {
     const urls = ['https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js', 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js'];
-    const tryNext = i => { if (i >= urls.length) { postcodeLoading = null; return no(new Error('주소 검색을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')); }
+    const tryNext = i => { if (i >= urls.length) { postcodeLoading = null; return no(new Error('주소 검색을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')); }
       const s = document.createElement('script'); s.src = urls[i]; s.async = true; s.onload = () => ok(); s.onerror = () => { s.remove(); tryNext(i + 1); }; document.head.appendChild(s); };
     tryNext(0);
   });
@@ -380,12 +380,12 @@ $('#todayTipVoice').onclick = async () => {
     b.disabled = true; b.textContent = '불러오는 중…';
     try {
       const r = await fetch(`${state.api}/v1/tts/${tipData.speechId}`, { headers: { Authorization: 'Bearer ' + state.auth.token }, signal: AbortSignal.timeout(60000) });
-      if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || '음성을 불러오지 못했습니다'); }
+      if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || '음성을 불러오지 못했어요'); }
       tipUrl = URL.createObjectURL(await r.blob()); tipAudio = new Audio(tipUrl); tipAudio.onended = () => { b.textContent = '🔊 다시 듣기'; };
     } catch (e) { b.disabled = false; b.textContent = '🔊 듣기'; return toast(e.message); }
     b.disabled = false;
   }
-  try { await tipAudio.play(); b.textContent = '⏹ 멈추기'; } catch { b.textContent = '🔊 듣기'; toast('소리를 재생하지 못했습니다. 무음 모드인지 확인해 주세요.'); }
+  try { await tipAudio.play(); b.textContent = '⏹ 멈추기'; } catch { b.textContent = '🔊 듣기'; toast('소리를 재생하지 못했어요. 무음 모드인지 확인해 주세요.'); }
 };
 
 // ---------- 내 기록(최근 30일 플랜) ----------
@@ -395,7 +395,7 @@ async function loadHistory() {
   const box = $('#history'); box.innerHTML = '<p class="loading">기록을 불러오는 중…</p>';
   try {
     const { plans } = await api('/v1/me/plans?limit=100');
-    if (!plans.length) { box.innerHTML = '<p class="empty">아직 만든 북 워킹이 없습니다. 오늘 탭에서 첫 북 워킹을 만들어 보세요!</p>'; return; }
+    if (!plans.length) { box.innerHTML = '<p class="empty">아직 만든 북 워킹이 없어요. 오늘 탭에서 첫 북 워킹을 만들어 보세요!</p>'; return; }
     const days = {}; for (const p of plans) (days[kst(p.created_at).date] ??= []).push(p);
     box.innerHTML = Object.entries(days).map(([d, ps], i) => `<details class="hist-day"${i === 0 ? ' open' : ''}><summary><b>${esc(d)}</b><span class="muted">북 워킹 ${ps.length}개</span></summary>${ps.map(p => `
       <div class="hist-item">${safeUrl(p.cover) ? `<img src="${esc(p.cover)}" alt="" loading="lazy">` : '<div></div>'}<div>
@@ -403,7 +403,7 @@ async function loadHistory() {
         <b>${esc(p.sigungu ?? '')}</b> <span class="tag ${p.gate}">${esc(p.gate_name ?? p.gate ?? '')} ${p.score ?? ''}</span>
         <div class="small-text">${esc(p.course ?? '동네 산책')}${p.book ? ` · 『${esc(p.book)}』` : ''}${p.has_script ? ' · 🎧' : ''}</div>
         <div class="acts"><button type="button" class="ghost small" data-view="${p.id}">다시 보기</button><button type="button" class="ghost small" data-again="${p.id}" data-place="${esc(p.sigungu ?? '')}" data-sit="${esc(p.situation ?? '')}" data-comp="${esc(p.companion ?? '')}">오늘 다시</button></div>
-      </div></div>`).join('')}</details>`).join('') + '<p class="muted small-text">플랜은 서비스 개선과 운영을 위해 30일간 보관된 뒤 자동으로 지워집니다.</p>';
+      </div></div>`).join('')}</details>`).join('') + '<p class="muted small-text">플랜은 서비스 개선과 운영을 위해 30일간 보관된 뒤 자동으로 지워져요.</p>';
     box.querySelectorAll('[data-view]').forEach(b => b.onclick = async () => { try { const r = await api('/v1/plans/' + b.dataset.view); lastPlan = { id: r.id, plan: r.plan, voice: true }; go('plan'); renderPlan(lastPlan); } catch (e) { toast(e.message); } });
     box.querySelectorAll('[data-again]').forEach(b => b.onclick = () => { setOrigin(b.dataset.place); sel.situation = b.dataset.sit || null; sel.companion = ['solo', 'pair', 'family', 'group'].includes(b.dataset.comp) ? b.dataset.comp : null; sel.date = 'today'; go('plan'); drawForm(); (skipAskOnce = true, $('#planForm').requestSubmit()); });
   } catch (e) { box.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
@@ -420,7 +420,7 @@ $('#opinionForm').onsubmit = async e => {
   if (!text) { m.textContent = '의견을 한 줄이라도 적어 주세요.'; return; }
   $('#opinionSend').disabled = true; m.textContent = '';
   try { await api('/v1/opinions', { method: 'POST', body: JSON.stringify({ rating, text }) }); $('#opinionText').value = ''; $('#opinionCount').textContent = '0/500'; rating = null; setRating(null); go('plan'); toast('소중한 의견 감사합니다! 더 나은 북 워킹으로 보답할게요.'); }
-  catch (err) { m.textContent = err.message || '의견을 보내지 못했습니다. 잠시 뒤 다시 시도해 주세요.'; }
+  catch (err) { m.textContent = err.message || '의견을 보내지 못했어요. 잠시 뒤 다시 시도해 주세요.'; }
   finally { $('#opinionSend').disabled = false; }
 };
 
@@ -441,14 +441,14 @@ async function refreshUsage() {
 }
 function applyAiLock(ai) {
   aiLocked = ai && ai.available === false && state.auth?.user?.role !== 'admin';
-  $('#aiLock').hidden = !aiLocked; if (aiLocked) { $('#aiLockMsg').textContent = ai.message || '지금은 AI 이용량이 모두 소진되어 잠시 이용할 수 없습니다.'; hideTip(); }
+  $('#aiLock').hidden = !aiLocked; if (aiLocked) { $('#aiLockMsg').textContent = ai.message || '지금은 AI 이용량이 모두 소진되어 잠시 이용할 수 없어요.'; hideTip(); }
   $('#btnPlan').disabled = !!aiLocked;
 }
 async function openSettings() {
   await refreshUsage();
   const a = state.auth; if (!a) return;
   $('#accountInfo').textContent = `${a.user.displayName}(${a.user.loginId}) · ${ROLE_LABEL[a.user.role] ?? a.user.role} · 남은 시간 ${Math.floor(remaining() / 60)}분 ${remaining() % 60}초`;
-  $('#usageInfo').textContent = usage ? `이번 세션(${usage.limits.sessionMinutes}분) 질문 ${usage.session}/${usage.limits.sessionMessages}건 · 오늘 질문 ${usage.today.messages}/${usage.limits.dailyMessages}건 · 오늘 로그인 ${usage.today.sessions}/${usage.limits.dailySessions}회 · 오늘 AI 토큰 ${usage.today.tokens}/${usage.limits.dailyTokens}개. ${DAY_NOTE}` : '사용량을 확인할 수 없습니다.';
+  $('#usageInfo').textContent = usage ? `이번 로그인(${usage.limits.sessionMinutes}분) 질문 ${usage.session}/${usage.limits.sessionMessages}건 · 오늘 질문 ${usage.today.messages}/${usage.limits.dailyMessages}건 · 오늘 로그인 ${usage.today.sessions}/${usage.limits.dailySessions}회 · 오늘 AI 사용량 ${usage.today.tokens}/${usage.limits.dailyTokens}개. ${DAY_NOTE}` : '사용량을 확인할 수 없어요.';
   $('#settingsDialog').showModal();
 }
 $('#btnSettings').onclick = openSettings;
@@ -476,8 +476,8 @@ setInterval(() => {
   if (!state.auth) { markActive(); return; }
   if (audioPlaying() || $('#btnPlan').textContent.includes('모으는 중')) { markActive(); return; }
   const idle = Date.now() - lastActive;
-  if (idle >= IDLE_MS) { endSession('15분 동안 사용이 없어 자동 로그아웃했습니다.', 'idle'); showNotice('자동 로그아웃되었습니다', '15분 동안 사용이 없어 안전을 위해 로그아웃했습니다.\n다시 로그인해 주세요.'); }
-  else if (idle >= IDLE_WARN_MS && !idleWarned) { idleWarned = true; toast('1분 동안 사용이 없으면 자동 로그아웃됩니다. 화면을 터치하면 계속 이용할 수 있어요.', 8000); }
+  if (idle >= IDLE_MS) { endSession('15분 동안 사용이 없어 자동 로그아웃했어요.', 'idle'); showNotice('자동 로그아웃됐어요', '15분 동안 사용이 없어 안전을 위해 로그아웃했어요.\n다시 로그인해 주세요.'); }
+  else if (idle >= IDLE_WARN_MS && !idleWarned) { idleWarned = true; toast('1분 동안 사용이 없으면 자동 로그아웃돼요. 화면을 터치하면 계속 이용할 수 있어요.', 8000); }
 }, 15000);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') lastActive = Math.min(lastActive, Date.now()); });
 
@@ -511,7 +511,7 @@ async function showApp() {
   $('#btnAdmin').hidden = state.auth.user?.role !== 'admin';
   markActive();
   timer?.stop();
-  timer = startTimer($('#timer'), { onWarn: () => toast('1분 뒤 자동 로그아웃됩니다. 필요한 내용은 지금 확인해 주세요.', 8000), onExpire: () => { const min = sessionMinutes(); endSession(`${min}분 이용 시간이 끝나 로그아웃했습니다.`, 'expired'); showNotice('이용 시간이 끝났습니다', `로그인 1회에 ${min}분 이용할 수 있습니다.\n이용해 주셔서 감사합니다.`); } });
+  timer = startTimer($('#timer'), { onWarn: () => toast('1분 뒤 자동 로그아웃돼요. 필요한 내용은 지금 확인해 주세요.', 8000), onExpire: () => { const min = sessionMinutes(); endSession(`${min}분 이용 시간이 끝나 로그아웃했어요.`, 'expired'); showNotice('이용 시간이 끝났어요', `로그인 1회에 ${min}분 이용할 수 있어요.\n이용해 주셔서 감사합니다.`); } });
   if (state.auth.user?.mustChangePassword) openPw(true);
   refreshUsage();
   loadPlaces().then(showDailyTip);
@@ -519,19 +519,19 @@ async function showApp() {
 }
 function openPw(forced = true) {
   $('#pwMsg').textContent = ''; $('#pwCur').value = ''; $('#pwNew').value = ''; $('#pwNew2').value = '';
-  $('#pwReason').textContent = forced ? '처음 로그인했거나 관리자가 초기화한 계정입니다. 새 비밀번호를 정해 주세요.' : '지금 비밀번호와 새 비밀번호를 입력해 주세요.';
+  $('#pwReason').textContent = forced ? '처음 로그인했거나 관리자가 초기화한 계정이에요. 새 비밀번호를 정해 주세요.' : '지금 비밀번호와 새 비밀번호를 입력해 주세요.';
   $('#pwCancel').hidden = forced; $('#pwDialog').showModal();
 }
 $('#pwCancel').onclick = () => $('#pwDialog').close();
 $('#pwDialog').addEventListener('cancel', e => { if ($('#pwCancel').hidden) e.preventDefault(); }); // 첫 로그인 변경은 닫지 못하게
 $('#pwForm').onsubmit = async e => {
   e.preventDefault();
-  if ($('#pwNew').value !== $('#pwNew2').value) { $('#pwMsg').textContent = '새 비밀번호 두 칸이 서로 다릅니다'; return; }
+  if ($('#pwNew').value !== $('#pwNew2').value) { $('#pwMsg').textContent = '새 비밀번호 두 칸이 서로 달라요'; return; }
   try {
     const r = await api('/v1/auth/password', { method: 'POST', body: JSON.stringify({ current: $('#pwCur').value, next: $('#pwNew').value }) });
     if (r.token) saveAuth({ ...state.auth, token: r.token });
     saveAuth({ ...state.auth, user: { ...state.auth.user, mustChangePassword: false } });
-    $('#pwDialog').close(); toast('비밀번호를 바꿨습니다');
+    $('#pwDialog').close(); toast('비밀번호를 바꿨어요');
   } catch (err) { $('#pwMsg').textContent = err.message; }
 };
 $('#loginForm').onsubmit = async e => {
@@ -543,7 +543,7 @@ $('#loginForm').onsubmit = async e => {
     $('#loginPw').value = ''; await showApp();
   } catch (err) {
     if (err.code === 'ACTIVE_SESSION') { $('#loginPw').value = ''; showNotice('다른 기기에서 이용 중이에요', err.message); }
-    else if (err.code === 'LOGIN_DAILY_LIMIT') showNotice('오늘 로그인 횟수를 모두 쓰셨어요', '다음 날 한국 시간(KST) 0시부터 다시 로그인할 수 있습니다.');
+    else if (err.code === 'LOGIN_DAILY_LIMIT') showNotice('오늘 로그인 횟수를 모두 쓰셨어요', '다음 날 한국 시간 밤 12시부터 다시 로그인할 수 있어요.');
     else $('#loginMsg').textContent = err.message;
   } finally { btn.disabled = false; }
 };
@@ -554,7 +554,7 @@ $('#btnLogout').onclick = () => {
   update();
   refreshUsage().then(() => { if (d.open) update(); });
   d.returnValue = 'cancel';
-  d.onclose = () => { if (d.returnValue === 'ok') endSession('로그아웃했습니다.'); else markActive(); };
+  d.onclose = () => { if (d.returnValue === 'ok') endSession('로그아웃했어요.'); else markActive(); };
   d.showModal();
 };
 setOnAuthLost(msg => endSession(msg || '다시 로그인해 주세요', 'lost'));
@@ -562,7 +562,7 @@ setOnMustChange(() => openPw(true));
 
 (async () => {
   const h = await health();
-  if (h.error) return showLogin('서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+  if (h.error) return showLogin('서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.');
   if (state.authMode === 'off' || state.auth) return showApp();
   showLogin();
 })();

@@ -204,3 +204,47 @@ dialog{border:0;border-radius:20px;box-shadow:0 20px 50px rgba(31,42,36,.25)}
 .brand h1{font-size:16px}
 @media (max-width:720px){.top-right .link-btn{font-size:13px;padding:8px 10px}}
 .settings label.inline{flex-direction:row;align-items:center;gap:8px;font-size:14px;color:var(--ink);margin:4px 0 8px}.settings label.inline input{width:auto;min-height:0}
+
+/* ===== 디자인 통일 v0.4.0 (캔바 '북 워킹 UI 디자인 시스템' 기준, 서비스 화면 style.css 와 같은 색·글꼴·모서리·버튼) ===== */
+:root { --bg: #F7F5EF; --panel: #FFFFFF; --panel2: #F4F3EE; --panelSoft: #EEF4EF; --line: #E4E0D6; --text: #1F2A24; --ink: #1F2A24; --dim: #5F6B64; --sub: #5F6B64;
+  --cyan: #2F6B4F; --blue: #24553F; --acc: #2F6B4F; --accInk: #24553F; --accSoft: #E6F0E9; --accLine: #B9D3C3; --ok: #2F6B4F; --warn: #B45309; --info: #3B82C4; --bad: #991B1B;
+  --grad: linear-gradient(135deg, #2F6B4F, #24553F); --r: 12px; --shadow: 0 1px 2px rgba(31,42,36,.05), 0 4px 14px rgba(31,42,36,.06); }
+body { font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 15px; background: var(--bg); color: var(--ink); }
+.admin { background: var(--bg); }
+.top { background: rgba(247,245,239,.96); border-bottom: 1px solid var(--line); }
+.brand h1 { font-size: 18px; color: var(--ink); } .brand img { border-radius: 8px; }
+.link-btn, .top-right .link-btn { border-radius: var(--r); border: 1px solid var(--line); background: #fff; color: var(--accInk); font-weight: 700; padding: 8px 12px; text-decoration: none; }
+.timer { border-radius: 999px; background: var(--accSoft); color: var(--accInk); font-weight: 700; padding: 4px 10px; }
+.timer.warn { background: #FDF3E3; color: var(--warn); }
+.atabs { gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--bg); }
+.atabs button { border-radius: 999px; border: 0; background: #fff; color: var(--dim); font-size: 14px; font-weight: 600; padding: 8px 14px; min-height: 40px; box-shadow: 0 1px 0 rgba(31,42,36,.10), 0 1px 3px rgba(31,42,36,.06); }
+.atabs button.active { background: var(--acc); color: #fff; border: 0; font-weight: 800; box-shadow: 0 2px 8px rgba(47,107,79,.30); }
+.aview { padding: 14px 12px 40px; }
+.card, .tool { background: #fff; border: 0; border-radius: 16px; box-shadow: var(--shadow); }
+.card h2, .card h3, .tool h2 { font-size: 17px; font-weight: 800; color: var(--ink); }
+.scroll { border: 0; border-radius: var(--r); background: #fff; box-shadow: var(--shadow); }
+.tbl { font-size: 13.5px; }
+.tbl th { background: var(--accSoft); color: var(--accInk); font-weight: 800; }
+.tbl th, .tbl td, table th, table td { border-bottom: 1px solid var(--line); padding: 10px 8px; }
+.pill { border-radius: 999px; border: 0; font-size: 12px; font-weight: 700; padding: 3px 10px; background: var(--panel2); color: var(--dim); }
+.pill.ok { background: var(--accSoft); color: var(--accInk); border: 0; }
+.pill.warn { background: #FDF3E3; color: #92400E; border: 0; }
+.pill.bad { background: #FBE9E7; color: var(--bad); border: 0; }
+.acts button, .tool button, .mini-btn, .ghost-btn, .settings .ghost { border-radius: var(--r); border: 1px solid var(--line); background: #fff; color: var(--accInk); font-weight: 700; min-height: 36px; padding: 6px 12px; }
+.acts button.danger { border-color: #E8B4AE; color: var(--bad); background: #fff; }
+.card form button, .llm-form button[type=submit], .settings button[type=submit], .settings button:not(.ghost) { border-radius: var(--r); border: 0; background: var(--acc); color: #fff; font-weight: 800; min-height: 48px; padding: 10px 16px; }
+.card input, .card select, .settings input, .settings select, .llm-form input, .llm-form select { border-radius: var(--r); border: 1px solid var(--line); background: #fff; min-height: 48px; padding: 10px 12px; font-size: 16px; }
+.card input:focus, .card select:focus, .settings input:focus, .settings select:focus, .llm-form input:focus, .llm-form select:focus { outline: 2px solid var(--acc); outline-offset: 0; border-color: transparent; }
+dialog { border: 0; border-radius: 20px; box-shadow: 0 20px 50px rgba(31,42,36,.25); }
+.toast { border-radius: var(--r); background: var(--ink); color: #fff; }
+.chatlog .m { border-radius: var(--r); } .chatlog .user { background: var(--accSoft); }
+.secret { border-radius: 8px; }
+.rep-item, .qday { border-radius: var(--r); }
+.capbar i, .rep-hours i { border-radius: 4px; }
+@media (max-width:720px) { .tbl tr { border-radius: var(--r); background: #fff; box-shadow: var(--shadow); } .atabs button { font-size: 13.5px; } }
+.tool { padding: 16px; margin-bottom: 12px; } .tool h2 { margin: 0 0 10px; }
+.card { padding: 16px; margin-bottom: 12px; }
+.pill { display: inline-block; width: auto; max-width: max-content; }
+.card form label, .settings label, .llm-form label { display: block; margin-bottom: 12px; font-weight: 700; color: var(--ink); }
+.card select, .settings select, .llm-form select { -webkit-appearance: none; appearance: none; height: 48px; padding-right: 36px; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='16' viewBox='0 0 12 16'%3E%3Cpath d='M2 6l4-4 4 4M2 10l4 4 4-4' fill='none' stroke='%23333' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 14px center; }
+.card form button, .llm-form button[type=submit] { margin-top: 4px; min-width: 120px; }

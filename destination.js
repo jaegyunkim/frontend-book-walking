@@ -34,13 +34,13 @@ function placeSection(title, items, status) {
     const link = placeLink(p);
     return `<li>${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(p.name)}</a>` : esc(p.name)}<small>${esc(p.address || '주소 미제공')}</small><small>${[num(p.distanceM) !== null ? `목적지에서 ${fmt(p.distanceM)}m` : '', p.source].filter(Boolean).map(esc).join(' · ')}</small></li>`;
   });
-  return `<section><h3>${title}</h3>${rows.length ? `<ul>${rows.join('')}</ul>` : `<p class="muted">${status === 'unavailable' ? '제공처에서 정보를 불러오지 못했습니다.' : '이 반경에서 찾은 장소가 없습니다.'}</p>`}</section>`;
+  return `<section><h3>${title}</h3>${rows.length ? `<ul>${rows.join('')}</ul>` : `<p class="muted">${status === 'unavailable' ? '제공처에서 정보를 불러오지 못했어요.' : '이 반경에서 찾은 장소가 없어요.'}</p>`}</section>`;
 }
 export function resultHtml(data) {
   const t = data.travel || {}, f = t.fuel;
   const duration = num(t.minutes), distance = num(t.distanceKm);
-  const cost = v => num(v) === null ? '정보 없음' : `${fmt(v)}원`;
-  const times = t.timeSource !== 'unavailable' && duration !== null ? `약 ${fmt(duration)}분` : '시간 정보 없음';
+  const cost = v => num(v) === null ? '정보가 없어요' : `${fmt(v)}원`;
+  const times = t.timeSource !== 'unavailable' && duration !== null ? `약 ${fmt(duration)}분` : '시간 정보가 없어요';
   const radius = num(data.radiusM) === null ? '목적지 주변' : `목적지 반경 ${fmt(data.radiusM / 1000)}km`;
   return `<section><h3>${esc(modes[t.mode] || '목적지')} 이동 · 편도</h3><p><b>${times}</b>${distance === null ? '' : ` · ${fmt(distance)}km`}${t.timeSource === 'estimate' ? ' (추정)' : t.timeSource === 'route' ? ' (경로 기준)' : ''}</p>${t.basis ? `<p class="muted">${esc(t.basis)}</p>` : ''}
     ${t.mode === 'car' ? `<p><b>예상 ${f?.type === 'ev' ? '충전비' : f ? '휘발유비' : '차량 에너지 비용'}</b> · 편도 ${cost(f?.oneWayKrw)} / 왕복 ${cost(f?.estimateKrw)}</p>${f?.basis ? `<p class="muted">${esc(f.basis)}</p>` : ''}<p class="muted">편도 통행료(별도): ${cost(t.toll)}</p>` : ''}</section>
@@ -59,7 +59,7 @@ export function createDestinationDialog(doc, api) {
     el('destPriceLabel').textContent = ev ? '충전 단가 (원/kWh)' : '휘발유 가격 (원/L)';
     [efficiency.value, price.value] = values[vehicle.value]; previousVehicle = vehicle.value;
   }
-  function invalidate() { ++version; el('destSubmit').disabled = false; result.textContent = '조건이 바뀌었습니다. 다시 조회해 주세요.'; }
+  function invalidate() { ++version; el('destSubmit').disabled = false; result.textContent = '조건이 바뀌었어요. 다시 조회해 주세요.'; }
   form.oninput = invalidate;
   mode.onchange = () => { carFields(); invalidate(); };
   vehicle.onchange = () => { vehicleFields(); invalidate(); };
@@ -77,7 +77,7 @@ export function createDestinationDialog(doc, api) {
         el('destPhone').textContent = data.destination?.tel || active.item.tel ? '문의: ' + (data.destination?.tel || active.item.tel) : '';
         result.innerHTML = resultHtml(data);
       }
-    } catch (e) { if (seq === version && dialog.open) result.textContent = `조회할 수 없습니다. ${e.message}`; }
+    } catch (e) { if (seq === version && dialog.open) result.textContent = `조회할 수 없어요. ${e.message}`; }
     finally { if (seq === version) el('destSubmit').disabled = false; }
   }
   form.onsubmit = e => { e.preventDefault(); load(); };
@@ -86,7 +86,7 @@ export function createDestinationDialog(doc, api) {
     el('destTitle').textContent = item.name;
     const url = mapUrl(item), link = placeLink(item);
     el('destInfo').innerHTML = `<p>${esc(item.kind)}</p><p class="muted" id="destAddress">${esc(item.address || item.sigun || '')}</p><p id="destOverview">${esc(item.summary || item.line || '')}</p><p id="destPhone" class="muted">${item.tel ? '문의: ' + esc(item.tel) : ''}</p>${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">목적지 지도</a>` : ''}${link && link !== url ? ` · <a href="${esc(link)}" target="_blank" rel="noopener noreferrer">장소 정보</a>` : ''}`;
-    el('destFrom').textContent = active.origin ? `출발지: ${plan.origin.label || plan.place || `${active.origin.lat}, ${active.origin.lon}`}` : `이전 기록에 출발지 좌표가 없습니다. 출발지를 확인한 뒤 조회하세요.`;
+    el('destFrom').textContent = active.origin ? `출발지: ${plan.origin.label || plan.place || `${active.origin.lat}, ${active.origin.lon}`}` : `이전 기록에 출발지 좌표가 없어요. 출발지를 확인한 뒤 조회하세요.`;
     originInput.disabled = el('destOriginField').hidden = !!active.origin;
     originInput.value = active.origin ? '' : plan.origin?.label || plan.place || '';
     if (lastPlan !== plan) {

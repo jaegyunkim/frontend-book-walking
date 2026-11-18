@@ -4,12 +4,12 @@ export function approvalMailto(loginId, temporaryPassword) {
   if (!/^[^\s@?&#,;<>]+@[^\s@?&#,;<>]+\.[^\s@?&#,;<>]+$/.test(recipient) || /[\r\n]/.test(recipient)) {
     throw new Error('신청자 이메일 주소를 확인해 주세요.');
   }
-  if (typeof temporaryPassword !== 'string' || !temporaryPassword) throw new Error('임시 비밀번호가 없습니다.');
-  const subject = '북 워킹(Book Walking), 가입이 승인되었습니다!';
+  if (typeof temporaryPassword !== 'string' || !temporaryPassword) throw new Error('임시 비밀번호가 없어요.');
+  const subject = '북 워킹(Book Walking), 가입이 승인됐어요!';
   const body = [
-    '안녕하세요! 오늘 걷기 좋은 길과 그 길에 어울리는 책을 골라 드리는 ‘북 워킹’에 오신 것을 환영합니다.',
+    '안녕하세요! 오늘 걷기 좋은 길과 그 길에 어울리는 책을 골라 드리는 ‘북 워킹’에 오신 것을 환영해요.',
     '',
-    '신청하신 가입이 승인되었습니다. 아래 주소에서 서비스를 이용해 주세요.',
+    '신청하신 가입이 승인됐어요. 아래 주소에서 서비스를 이용해 주세요.',
     'https://jaegyunkim.github.io/frontend-book-walking/',
     '',
     `로그인 이메일: ${recipient}`,
