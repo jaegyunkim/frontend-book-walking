@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.2';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.3';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.2';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.3';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -416,7 +416,6 @@ async function openSettings() {
   const a = state.auth; if (!a) return;
   $('#accountInfo').textContent = `${a.user.displayName}(${a.user.loginId}) · ${ROLE_LABEL[a.user.role] ?? a.user.role} · 남은 시간 ${Math.floor(remaining() / 60)}분 ${remaining() % 60}초`;
   $('#usageInfo').textContent = usage ? `이번 세션(${usage.limits.sessionMinutes}분) 질문 ${usage.session}/${usage.limits.sessionMessages}건 · 오늘 질문 ${usage.today.messages}/${usage.limits.dailyMessages}건 · 오늘 로그인 ${usage.today.sessions}/${usage.limits.dailySessions}회 · 오늘 AI 토큰 ${usage.today.tokens}/${usage.limits.dailyTokens}개. ${DAY_NOTE}` : '사용량을 확인할 수 없습니다.';
-  $('#adminLink').hidden = a.user.role !== 'admin';
   $('#settingsDialog').showModal();
 }
 $('#btnSettings').onclick = openSettings;
