@@ -249,3 +249,55 @@ dialog { border: 0; border-radius: 20px; box-shadow: 0 20px 50px rgba(31,42,36,.
 .card select, .settings select, .llm-form select { -webkit-appearance: none; appearance: none; height: 48px; padding-right: 36px; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='16' viewBox='0 0 12 16'%3E%3Cpath d='M2 6l4-4 4 4M2 10l4 4 4-4' fill='none' stroke='%23333' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 14px center; }
 .card form button, .llm-form button[type=submit] { margin-top: 4px; min-width: 120px; }
 body { word-break: keep-all; overflow-wrap: anywhere; }
+
+/* ===== 접속현황 v0.4.14 (frontend-go-fishing 접속현황을 디자인 통일 v0.4.0 색으로: 메인 = 진초록 #2F6B4F, 신청 = 하늘색 #3B82C4, 외부 차트 라이브러리 없음) ===== */
+.vz-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.vz-head h2 { margin: 0; } .vz-head .sub { flex: 1 0 100%; margin: 2px 0 0; line-height: 1.6; }
+.tool button.on, .acts button.on { background: var(--acc); border-color: var(--acc); color: #fff; }
+.vz-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 12px; }
+.vz-kpi { background: #fff; border-radius: var(--r); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.vz-kt { font-size: 12.5px; color: var(--sub); font-weight: 700; }
+.vz-kv { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--ink); }
+.vz-kv b { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; } .vz-kv .vz-big { font-size: 24px; color: var(--accInk); }
+.vz-kv i, .vz-legend i, .vz-peak i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.vz-ks { font-size: 12px; color: var(--sub); line-height: 1.55; }
+.vz-chg { font-weight: 700; color: var(--ink); } .vz-chg.up { color: var(--accInk); } .vz-chg.down { color: #9A5B13; } .vz-chg.none { font-weight: 400; color: var(--sub); }
+.vz-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+.vz-tabs button { flex: 1 0 auto; min-height: 38px; padding: 6px 12px; border-radius: 999px; border: 0; background: #fff; color: var(--dim); font-size: 13.5px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 0 rgba(31,42,36,.10), 0 1px 3px rgba(31,42,36,.06); }
+.vz-tabs button.on { background: var(--acc); color: #fff; box-shadow: 0 2px 8px rgba(47,107,79,.30); }
+.vz-card h3 { margin: 0 0 8px; line-height: 1.4; } .vz-card h3 .sub { display: block; font-weight: 400; font-size: 12px; margin-top: 2px; }
+.vz-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 4px 0 10px; }
+.vz-sum .vz-kpi { background: var(--panel2); box-shadow: none; }
+.vz-peak { display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--ink); }
+.vz-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink); margin: 2px 0 6px; }
+.vz-note { margin: 2px 0 8px; font-size: 12px; line-height: 1.55; }
+.vz-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 2px 0 6px; }
+.vz-seg button { border: 0; background: #fff; color: var(--sub); font-size: 12.5px; padding: 5px 12px; min-height: 32px; cursor: pointer; }
+.vz-seg button + button { border-left: 1px solid var(--line); }
+.vz-seg button.on { background: var(--accSoft); color: var(--accInk); font-weight: 800; }
+.vz-wrap { overflow: hidden; } .vz-svg { display: block; max-width: 100%; height: auto; touch-action: manipulation; }
+.vz-grid { stroke: #EFECE4; stroke-width: 1; } .vz-base { stroke: #CFC9BC; stroke-width: 1; }
+.vz-ax { font-size: 10.5px; fill: var(--sub); font-variant-numeric: tabular-nums; } .vz-ax.dim { fill: #B3ADA0; }
+.vz-end { font-size: 11px; font-weight: 800; fill: var(--ink); }
+.vz-pre { fill: #F4F3EE; }
+.vz-hit { fill: transparent; cursor: pointer; } .vz-hit:hover, .vz-hit.on { fill: rgba(47,107,79,.08); }
+.vz-read { margin: 4px 0 0; font-size: 12.5px; color: var(--ink); min-height: 1.6em; background: var(--panel2); border-radius: 8px; padding: 6px 10px; }
+.vz-more { margin-top: 10px; } .vz-more summary { cursor: pointer; font-size: 13px; color: var(--accInk); font-weight: 700; padding: 6px 0; }
+.vz-scroll { overflow-x: auto; margin-top: 4px; border: 1px solid var(--line); border-radius: var(--r); }
+.vz-tbl { width: 100%; font-variant-numeric: tabular-nums; } .vz-tbl th, .vz-tbl td { padding: 8px; }
+.vz-tbl tr:last-child td { border-bottom: 0; } .vz-tbl td .sub { font-size: 11.5px; }
+.vz-sep { color: var(--sub); margin: 0 4px; }
+.vz-foot summary { cursor: pointer; list-style: none; } .vz-foot summary::-webkit-details-marker { display: none; }
+.vz-foot summary h3 { display: inline; margin: 0; } .vz-foot summary::before { content: '▸ '; color: var(--sub); } .vz-foot[open] summary::before { content: '▾ '; }
+.vz-foot ul { margin: 10px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.65; color: var(--ink); } .vz-foot li + li { margin-top: 4px; }
+@media (max-width: 900px) { .vz-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 720px) {
+  .vz-kpis { gap: 8px; } .vz-kpi { padding: 10px 12px; } .vz-kv b { font-size: 18px; } .vz-ks { font-size: 12px; } .vz-read { font-size: 13px; }
+  .vz-tabs { gap: 6px; } .vz-tabs button { flex: 1 0 calc(25% - 6px); padding: 6px 4px; font-size: 13px; min-height: 40px; }
+  .vz-seg button { min-height: 38px; }
+  /* 표는 기존 규칙대로 카드형(.tbl) — 감싸는 틀은 테두리 없이 */
+  .vz-scroll { border: 0; overflow: visible; }
+  .vz-tbl tr { box-shadow: none; border: 1px solid var(--line); }
+}
+@media (max-width: 360px) { .vz-kpis, .vz-sum { grid-template-columns: 1fr; } }
+.vz-dl { display: block; } .vz-pc { white-space: nowrap; margin-left: 2px; }

@@ -1,7 +1,8 @@
-import { ROLE_LABEL, policyText, DAY_NOTE } from './role-policy.js?v=0.4.13';
+import { ROLE_LABEL, policyText, DAY_NOTE } from './role-policy.js?v=0.4.14';
 import { approvalMailto } from './approval-email.js?v=0.1.7';
+import { visitsHtml } from './admin-visits.js?v=0.4.14';
 // 북 워킹 관리자 화면(backend-go-fishing/frontend-go-fishing 운영관리와 동일 구성 + 플랜·코스 탭): 계정·세션·사용량·대화 로그·로그인/작업 기록. 관리자 계정으로 로그인한 탭에서만 동작.
-import { state, api, health, startTimer, syncAccount, setOnAuthLost, logout } from './auth.js?v=0.4.13';
+import { state, api, health, startTimer, syncAccount, setOnAuthLost, logout } from './auth.js?v=0.4.14';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const dt = v => v ? new Date(v).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
@@ -194,6 +195,17 @@ const views = {
     view.innerHTML = `<div class="tool"><h2>로그인 기록(최근 200)</h2></div><div class="scroll"><table class="tbl"><tr><th>시각</th><th>아이디</th><th>결과</th><th>기기</th></tr>
     ${logins.map(l => `<tr><td>${dt(l.at)}</td><td>${esc(l.login_id)}</td><td><span class="pill ${l.success ? 'ok' : 'bad'}">${l.success ? '성공' : '실패'}</span> <span class="sub">${esc(l.reason ?? '')}</span></td><td class="sub">${esc((l.user_agent ?? '').slice(0, 60))}</td></tr>`).join('')}</table></div>`;
   },
+  // 접속현황: 메인(로그인)·이용 신청 화면 방문자(하루 IP 1회) — 시간별·일간·요일별·주간별·월간·시즌별·연간(섹션 탭)
+  async visits(opt = {}) {
+    const days = [14, 30, 90].includes(opt.days) ? opt.days : 30;
+    const { visits } = await api(`/v1/admin/visits?days=${days}`);
+    const draw = () => {
+      view.innerHTML = visitsHtml(visits, days, view.clientWidth - 56, visitsUi);
+      view.querySelectorAll('[data-vdays]').forEach(b => b.onclick = () => views.visits({ days: Number(b.dataset.vdays) }));
+      $('#vRefresh').onclick = async () => { const b = $('#vRefresh'); b.disabled = true; b.textContent = '불러오는 중…'; await views.visits({ days }); };
+    };
+    draw(); visitsRedraw = draw;
+  },
   async reports() {
     const { reports } = await api('/v1/admin/reports?limit=90');
     const ST = { ok: '<span class="pill ok">정상</span>', warn: '<span class="pill warn">주의</span>', critical: '<span class="pill bad">위험</span>' };
@@ -280,7 +292,7 @@ const capBar = c => c ? `<div class="capbar">${[['오늘 신청', c.registers], 
 const backBar = title => `<div class="tool"><div class="acts"><button id="backUsers">← 사용자</button></div><h2>${title}</h2></div>`;
 function bindBack() { const b = $('#backUsers'); if (b) b.onclick = () => go('users'); }
 async function go(v, opt) {
-  current = v; document.querySelectorAll('#atabs button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+  current = v; visitsRedraw = null; document.querySelectorAll('#atabs button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
   document.querySelector(`#atabs button[data-v="${v}"]`)?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); window.scrollTo({ top: 0 });
   try { await views[v](opt); } catch (e) { if (e.status !== 401) view.innerHTML = `<div class="card"><p class="sub">${esc(e.message)}</p></div>`; }
 }
@@ -295,6 +307,30 @@ function labelTables(root = view) {
   });
 }
 new MutationObserver(() => labelTables()).observe(view, { childList: true, subtree: true });
+// 접속현황 차트: 누르거나 올리면 아래 줄에 수치(휴대폰은 title 말풍선이 없어서), 화면 폭이 바뀌면 다시 그림
+let visitsRedraw = null, visitsW = 0, visitsLastW = innerWidth;
+const visitsUi = { sec: 'daily', modes: {} }; // 고른 섹션 탭·차트 보기(하루 평균/합계 등)는 새로 고침·기간 바꿈·화면 폭 변경에도 유지
+const resetRead = card => { const out = card?.querySelector('.vz-read'); if (out) out.textContent = out.dataset.hint ?? ''; card?.querySelectorAll('.vz-hit.on').forEach(x => x.classList.remove('on')); };
+view.addEventListener('click', e => {
+  const tab = e.target.closest?.('[data-vsec]');
+  if (tab) {
+    visitsUi.sec = tab.dataset.vsec;
+    view.querySelectorAll('[data-vsec]').forEach(b => { const on = b === tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    view.querySelectorAll('[data-vsec-pane]').forEach(p => { p.hidden = p.dataset.vsecPane !== visitsUi.sec; });
+    return;
+  }
+  const mode = e.target.closest?.('[data-vmode]');
+  if (mode) {
+    const card = mode.closest('.vz-card'); visitsUi.modes[card.dataset.vsecPane] = mode.dataset.vmode;
+    card.querySelectorAll('[data-vmode]').forEach(b => { const on = b === mode; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+    card.querySelectorAll('[data-vpane]').forEach(p => { p.hidden = p.dataset.vpane !== mode.dataset.vmode; });
+    resetRead(card);
+  }
+});
+const showTip = e => { const t = e.target.closest?.('[data-tip]'); if (!t) return; const card = t.closest('.vz-card'); const out = card?.querySelector('.vz-read'); if (!out) return; out.textContent = t.dataset.tip; card.querySelectorAll('.vz-hit.on').forEach(x => x.classList.remove('on')); t.classList.add('on'); };
+view.addEventListener('click', showTip); view.addEventListener('pointerover', e => { if (e.pointerType === 'mouse') showTip(e); });
+// 폭이 바뀔 때만 다시 그림(휴대폰은 스크롤하면 주소창 때문에 높이만 바뀌는 resize 가 자주 와요)
+addEventListener('resize', () => { clearTimeout(visitsW); visitsW = setTimeout(() => { if (innerWidth !== visitsLastW) { visitsLastW = innerWidth; visitsRedraw?.(); } }, 250); });
 
 (async () => {
   const h = await health();
