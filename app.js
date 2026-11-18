@@ -1,5 +1,6 @@
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.1.9';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncExpiry, remaining, sessionMinutes } from './auth.js?v=0.1.7';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.1.9';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -282,16 +283,19 @@ $('#opinionForm').onsubmit = async e => {
 };
 
 // ---------- 계정 설정·사용량·AI 잠금 ----------
-const ROLE = { admin: '관리자', tester: '내부 테스터', user: '베타 테스터' };
+$('#loginPolicy').textContent = policyText('user') + '. ' + DAY_NOTE;
 let usage = null, aiLocked = false;
 async function refreshUsage() {
+  const token = state.auth?.token;
+  if (!token) return;
   try {
     const me = await api('/v1/auth/me', { timeoutMs: 10000 });
-    if (!me.user) return;
-    syncExpiry(me.remainingSec);
-    usage = { session: me.session?.messages ?? 0, sessionLimit: me.limits.sessionMessages, today: me.usage.today.messages, todayLimit: me.limits.dailyMessages, logins: me.usage.today.sessions, loginLimit: me.limits.dailySessions, role: me.role };
+    if (!me.user || token !== state.auth?.token) return;
+    syncAccount(me);
+    $('#btnAdmin').hidden = state.auth.user.role !== 'admin';
+    usage = { limits: me.limits, today: me.usage.today, session: me.session?.messages ?? 0 };
     applyAiLock(me.ai);
-  } catch { /* 401 은 자동 로그아웃 처리 */ }
+  } catch { if (token === state.auth?.token) usage = null; /* 401은 자동 로그아웃 처리 */ }
 }
 function applyAiLock(ai) {
   aiLocked = ai && ai.available === false && state.auth?.user?.role !== 'admin';
@@ -301,8 +305,8 @@ function applyAiLock(ai) {
 async function openSettings() {
   await refreshUsage();
   const a = state.auth; if (!a) return;
-  $('#accountInfo').textContent = `${a.user.displayName}(${a.user.loginId}) · ${ROLE[a.user.role] ?? a.user.role} · 남은 시간 ${Math.floor(remaining() / 60)}분 ${remaining() % 60}초`;
-  $('#usageInfo').textContent = usage ? `이번 로그인 ${usage.session}/${usage.sessionLimit}건 · 오늘 ${usage.today}/${usage.todayLimit}건 · 오늘 로그인 ${usage.logins}/${usage.role === 'user' ? usage.loginLimit + '회' : '제한 없음'}` : '';
+  $('#accountInfo').textContent = `${a.user.displayName}(${a.user.loginId}) · ${ROLE_LABEL[a.user.role] ?? a.user.role} · 남은 시간 ${Math.floor(remaining() / 60)}분 ${remaining() % 60}초`;
+  $('#usageInfo').textContent = usage ? `이번 세션(${usage.limits.sessionMinutes}분) 질문 ${usage.session}/${usage.limits.sessionMessages}건 · 오늘 질문 ${usage.today.messages}/${usage.limits.dailyMessages}건 · 오늘 로그인 ${usage.today.sessions}/${usage.limits.dailySessions}회 · 오늘 AI 토큰 ${usage.today.tokens}/${usage.limits.dailyTokens}개. ${DAY_NOTE}` : '사용량을 확인할 수 없습니다.';
   $('#adminLink').hidden = a.user.role !== 'admin';
   $('#settingsDialog').showModal();
 }
@@ -341,7 +345,7 @@ function showLogin(msg = '') {
   timer?.stop(); timer = null; hideTip(); applyAiLock(null);
   for (const d of ['#settingsDialog', '#placesDialog', '#pwDialog', '#logoutDialog', '#destinationDialog']) if ($(d).open) $(d).close();
   $('#appView').hidden = true; $('#loginView').hidden = false; $('#loginMsg').textContent = msg; $('#btnAdmin').hidden = true;
-  $('#sessionMinutesNote').textContent = state.sessionMinutes ?? 30;
+  usage = null;
   const id = localStorage.getItem('bookwalking.loginId'); if (id) { $('#loginId').value = id; $('#rememberId').checked = true; }
 }
 let ending = false;
@@ -351,7 +355,7 @@ async function showApp() {
   if (!situations.length) { try { situations = (await api('/v1/situations', { noAuth: true })).situations; } catch { situations = []; } }
   drawForm();
   if (!state.auth) return;
-  syncAdmin();
+  $('#btnAdmin').hidden = state.auth.user?.role !== 'admin';
   markActive();
   timer?.stop();
   timer = startTimer($('#timer'), { onWarn: () => toast('1분 뒤 자동 로그아웃됩니다. 필요한 내용은 지금 확인해 주세요.', 8000), onExpire: () => { const min = sessionMinutes(); endSession(`${min}분 이용 시간이 끝나 로그아웃했습니다.`, 'expired'); showNotice('이용 시간이 끝났습니다', `로그인 1회에 ${min}분 이용할 수 있습니다.\n이용해 주셔서 감사합니다.`); } });
@@ -359,11 +363,6 @@ async function showApp() {
   refreshUsage();
   loadPlaces().then(showDailyTip);
   recordLoginLocation();
-}
-/** 관리자 계정이면 상단에 관리자 페이지 버튼(같은 탭 세션을 그대로 쓴다) */
-async function syncAdmin() {
-  const btn = $('#btnAdmin'); btn.hidden = state.auth?.user?.role !== 'admin';
-  try { const me = await api('/v1/auth/me'); const role = me.role ?? me.user?.role; btn.hidden = role !== 'admin'; if (state.auth?.user) saveAuth({ ...state.auth, user: { ...state.auth.user, role } }); } catch { /* 표시만 영향 */ }
 }
 function openPw(forced = true) {
   $('#pwMsg').textContent = ''; $('#pwCur').value = ''; $('#pwNew').value = ''; $('#pwNew2').value = '';
@@ -391,15 +390,16 @@ $('#loginForm').onsubmit = async e => {
     $('#loginPw').value = ''; await showApp();
   } catch (err) {
     if (err.code === 'ACTIVE_SESSION') { $('#loginPw').value = ''; showNotice('다른 기기에서 이용 중이에요', err.message); }
-    else if (err.code === 'LOGIN_DAILY_LIMIT') showNotice('오늘 로그인 횟수를 모두 쓰셨어요', err.message);
+    else if (err.code === 'LOGIN_DAILY_LIMIT') showNotice('오늘 로그인 횟수를 모두 쓰셨어요', '다음 날 한국 시간(KST) 0시부터 다시 로그인할 수 있습니다.');
     else $('#loginMsg').textContent = err.message;
   } finally { btn.disabled = false; }
 };
 // 로그아웃: 확인 창 먼저(확인 = 로그아웃, 취소 = 그대로)
 $('#btnLogout').onclick = () => {
-  const d = $('#logoutDialog'), role = state.auth?.user?.role;
-  const left = usage && role === 'user' ? Math.max(0, usage.loginLimit - usage.logins) : null;
-  $('#logoutMsg').textContent = role === 'user' ? `오늘도 북 워킹을 이용해 주셔서 감사합니다.\n오늘 남은 로그인은 ${left ?? '-'}회입니다(하루 ${usage?.loginLimit ?? 3}회).` : '이용해 주셔서 감사합니다.\n필요하실 때 언제든 다시 로그인해 주세요.';
+  const d = $('#logoutDialog');
+  const update = () => { $('#logoutMsg').textContent = '이용해 주셔서 감사합니다.\n' + logoutUsage(usage?.today, usage?.limits); };
+  update();
+  refreshUsage().then(() => { if (d.open) update(); });
   d.returnValue = 'cancel';
   d.onclose = () => { if (d.returnValue === 'ok') endSession('로그아웃했습니다.'); else markActive(); };
   d.showModal();

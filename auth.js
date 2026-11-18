@@ -8,7 +8,6 @@ const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
 export const state = {
   api: localStorage.getItem('bookwalking.api') || window.BOOKWALKING_API || (isLocal ? 'http://localhost:8888' : ''),
   authMode: null,                 // 'required' | 'off' | null(서버 미연결)
-  sessionMinutes: 10,
   auth: JSON.parse(sessionStorage.getItem(KEY) || 'null') // { token, expiresAtLocal, user }
 };
 // 외부 수집기가 없거나 고장 나도 인증/요청 동작은 그대로 유지한다.
@@ -22,9 +21,12 @@ syncTelemetryBase();
 export function setApi(v) { state.api = String(v || '').trim().replace(/\/$/, ''); localStorage.setItem('bookwalking.api', state.api); syncTelemetryBase(); }
 export function saveAuth(a) { state.auth = a; if (a) sessionStorage.setItem(KEY, JSON.stringify(a)); else sessionStorage.removeItem(KEY); }
 /** 서버가 알려 준 남은 초로 로컬 만료 시각을 맞춘다(기기 시계가 틀려도 안전). */
-export function syncExpiry(remainingSec) { if (state.auth && Number.isFinite(remainingSec)) saveAuth({ ...state.auth, expiresAtLocal: Date.now() + remainingSec * 1000 }); }
-/** 이 계정의 세션 시간(분). 관리자가 계정별로 바꿀 수 있다. */
-export const sessionMinutes = () => state.auth?.minutes ?? state.auth?.user?.limits?.sessionMinutes ?? state.sessionMinutes;
+export function syncAccount(me) {
+  if (!state.auth || !me.user) return;
+  saveAuth({ ...state.auth, user: { ...state.auth.user, ...me.user, role: me.role ?? me.user.role, limits: me.limits },
+    minutes: me.limits.sessionMinutes, expiresAtLocal: Number.isFinite(me.remainingSec) ? Date.now() + me.remainingSec * 1000 : state.auth.expiresAtLocal });
+}
+export const sessionMinutes = () => state.auth?.minutes ?? state.auth?.user?.limits?.sessionMinutes;
 export const remaining = () => state.auth ? Math.max(0, Math.round((state.auth.expiresAtLocal - Date.now()) / 1000)) : 0;
 
 let onAuthLost = () => {};
@@ -65,7 +67,7 @@ export async function loadAuthImage(img, path) {
 }
 async function probe() {
   const h = await api('/healthz', { timeoutMs: 8000, noAuth: true });
-  state.authMode = h.auth?.mode ?? 'off'; state.sessionMinutes = h.auth?.sessionMinutes ?? 10;
+  state.authMode = h.auth?.mode ?? 'off';
   return h;
 }
 /** 서버 상태 확인. 기본 주소(config.js)가 안 되면 예비 주소를 차례로 시도한다(기기에 직접 저장한 주소는 그대로 존중). */
