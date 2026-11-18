@@ -378,3 +378,10 @@ details.sec summary { font-weight: 700; min-height: 32px; cursor: pointer; }
 #diaryStats .metric-num, #diaryStats .metric:first-child .metric-num { display: block; width: auto; height: auto; border: 0; font-size: 24px; color: var(--accent-text); }
 .star { color: #DDD8CC; } .star.on { color: #F2B33D; }
 .filters select { min-height: 44px; }
+/* 입력칸 지우기(ⓧ) v0.3.5 — 어디물어와 같은 방식 */
+.clearable { position: relative; display: block; }
+.clearable input { width: 100%; box-sizing: border-box; padding-right: 44px; }
+.clear-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; min-height: 0; padding: 0; display: grid; place-items: center; border: 0; background: transparent; border-radius: 50%; cursor: pointer; box-shadow: none; }
+.clear-btn svg circle { fill: #cbd5e1; } .clear-btn svg path { stroke: #fff; stroke-width: 2; stroke-linecap: round; }
+.clear-btn:hover svg circle, .clear-btn:focus-visible svg circle { fill: #64748b; } .clear-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.clear-btn[hidden] { display: none; }

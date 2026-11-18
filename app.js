@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.4';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.5';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.4';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.5';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -455,7 +455,19 @@ function showLogin(msg = '') {
   $('#appView').hidden = true; $('#loginView').hidden = false; $('#loginMsg').textContent = msg; $('#btnAdmin').hidden = true;
   usage = null;
   const id = localStorage.getItem('bookwalking.loginId'); if (id) { $('#loginId').value = id; $('#rememberId').checked = true; }
+  syncClearButtons();
 }
+// 입력칸 오른쪽 ⓧ: 값이 있을 때만 보이고, 누르면 지운 뒤 그 칸에 다시 포커스(어디물어와 같은 방식)
+document.querySelectorAll('input[data-clearable]').forEach(inp => {
+  const btn = inp.parentElement.querySelector('.clear-btn'); if (!btn) return;
+  const sync = () => { btn.hidden = !inp.value; };
+  ['input', 'change', 'focus'].forEach(ev => inp.addEventListener(ev, sync));
+  sync(); setTimeout(sync, 300); // 비밀번호 관리자의 자동 입력 반영
+  btn.addEventListener('mousedown', e => e.preventDefault()); // 포커스가 빠져 키보드가 닫히지 않게
+  btn.onclick = e => { e.preventDefault(); inp.value = ''; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.focus(); };
+});
+// 값을 코드로 넣은 뒤(저장된 아이디 등) ⓧ 표시를 맞춘다. 함수 선언이라 모듈 초기화 순서와 무관
+function syncClearButtons() { document.querySelectorAll('input[data-clearable]').forEach(inp => { const b = inp.parentElement.querySelector('.clear-btn'); if (b) b.hidden = !inp.value; }); }
 let ending = false;
 function endSession(msg, reason = 'logout') { if (ending) return; ending = true; logout(reason); lastPlan = null; $('#planResult').innerHTML = ''; showLogin(msg); ending = false; }
 async function showApp() {
