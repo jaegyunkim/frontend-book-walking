@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.2.3';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.0';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.2.3';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.0';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -28,30 +28,31 @@ function drawForm() {
   $('#companionChips').dataset.toggle = '1';
   chips($('#companionChips'), [{ id: 'solo', label: '혼자' }, { id: 'pair', label: '둘이' }, { id: 'family', label: '아이·가족' }, { id: 'group', label: '여럿이' }], sel.companion, v => { sel.companion = v; });
   chips($('#bookSituationChips'), situations, sel.bookSituation, v => { sel.bookSituation = v ?? 'solo_walk'; loadBooks(); });
-  const saved = localStorage.getItem('bookwalking.origin'); if (saved && !$('#origin').value) $('#origin').value = saved;
+  const saved = localStorage.getItem('bookwalking.origin'); if (saved && !$('#origin').value) setOrigin(saved); else renderPlaces();
 }
 const dateValue = () => ({ today: kstDate(0), tomorrow: kstDate(1), after: kstDate(2), sat: nextSaturday(), sun: kstDate(Math.round((Date.parse(nextSaturday()) - Date.parse(kstDate(0))) / 86400000) + 1) })[sel.date];
 
 // ---------- 플랜 ----------
-// 현재 위치: 화면에는 장소 이름(예: 경남 양산 동면 금오13길, 번지 제외)을 보여 주고, 계산에는 좌표를 그대로 쓴다.
+// ---------- 출발지: 칩 한 줄로 고른다([◎ 현재 위치] [자주 걷는 곳…] [＋ 주소로 추가]) ----------
+// 현재 위치는 화면에 장소 이름(예: 경남 양산 동면 금오13길, 번지 제외)을 보여 주고, 계산에는 좌표를 쓴다.
 let here = (() => { try { return JSON.parse(localStorage.getItem('bookwalking.here') || 'null'); } catch { return null; } })(); // { label, coords:'위도,경도' }
+let locating = false;
 const originValue = () => { const v = $('#origin').value.trim(); return here && v === here.label ? here.coords : v; };
-$('#origin').addEventListener('input', () => { if (here && $('#origin').value.trim() !== here.label) here = null; });
-$('#btnLocate').onclick = () => {
-  if (!navigator.geolocation) return toast('이 기기에서는 위치를 쓸 수 없습니다');
-  const btn = $('#btnLocate'); btn.disabled = true; btn.textContent = '찾는 중…';
-  const done = () => { btn.disabled = false; btn.textContent = '현재 위치'; };
+function setOrigin(v) { $('#origin').value = String(v ?? '').trim(); renderPlaces(); }
+function locateHere() {
+  if (!navigator.geolocation) return toast('이 기기에서는 위치를 쓸 수 없습니다. 주소로 추가해 주세요');
+  if (locating) return; locating = true; renderPlaces();
   navigator.geolocation.getCurrentPosition(async p => {
     const lat = p.coords.latitude.toFixed(4), lon = p.coords.longitude.toFixed(4), coords = `${lat},${lon}`;
     let label = null;
-    try { label = (await api(`/v1/place-name?lat=${lat}&lon=${lon}`, { timeoutMs: 10000 })).label; } catch { /* 이름을 못 찾으면 아래 기본 문구 */ }
-    label = label || '현재 위치';
-    here = { label, coords }; localStorage.setItem('bookwalking.here', JSON.stringify(here)); $('#origin').value = label; done(); toast(`현재 위치: ${label}`);
-  }, () => { done(); toast('위치 권한이 없어 동네 이름을 직접 입력해 주세요'); }, { timeout: 8000, maximumAge: 600000 });
-};
+    try { label = (await api(`/v1/place-name?lat=${lat}&lon=${lon}`, { timeoutMs: 10000 })).label; } catch { /* 이름을 못 찾으면 기본 문구 */ }
+    here = { label: label || '현재 위치', coords }; localStorage.setItem('bookwalking.here', JSON.stringify(here));
+    locating = false; setOrigin(here.label);
+  }, () => { locating = false; renderPlaces(); toast('위치 권한이 없어요. 주소로 추가해 주세요'); }, { timeout: 8000, maximumAge: 600000 });
+}
 $('#planForm').onsubmit = async e => {
   e.preventDefault();
-  const origin = originValue(); if (!origin) return;
+  const origin = originValue(); if (!origin) { toast('출발지를 먼저 골라 주세요'); return; }
   localStorage.setItem('bookwalking.origin', $('#origin').value.trim());
   const btn = $('#btnPlan'); btn.disabled = true; btn.textContent = '데이터 모으는 중…';
   const steps = ['기상청 예보', '에어코리아 미세먼지', '두루누비 걷기길', '예스24 상황별 베스트', 'Jev 도서 매칭', '주변 서점·관광지'];
@@ -200,20 +201,39 @@ document.querySelectorAll('.tabbar button').forEach(b => b.onclick = () => go(b.
 
 // ---------- 자주 걷는 곳(최대 5곳, 어디물어 '출발지'와 같은 역할) ----------
 let places = [];
+const short = l => String(l).split(' ').slice(-2).join(' ');
 function renderPlaces() {
-  const box = $('#placeChips');
-  $('#placeCount').textContent = `${places.length}/5`; $('#placeCount2').textContent = `${places.length}/5`;
-  box.innerHTML = places.map(p => `<button type="button" class="chip" role="radio" aria-checked="${p.selected}" data-place="${p.id}">📍 ${esc(p.label.split(' ').slice(-2).join(' '))}</button>`).join('') + `<button type="button" class="chip" id="placeManage">${places.length >= 5 ? '장소 지우기' : '＋ 장소 추가'}</button>`;
+  const box = $('#placeChips'), cur = $('#origin').value.trim(), full = places.length >= 5;
+  $('#placeCount').textContent = `자주 걷는 곳 ${places.length}/5`; $('#placeCount2').textContent = `${places.length}/5`;
+  const isHere = Boolean(here && cur && cur === here.label), saved = places.find(p => p.label === cur);
+  const temp = cur && !isHere && !saved ? cur : null; // 기록·추천·이번만 쓰기로 정한 출발지(저장 안 된 곳)
+  const canSave = !full && (isHere || temp);
+  box.innerHTML =
+    `<button type="button" class="chip gps" role="radio" aria-checked="${isHere}" data-here>${locating ? '◎ 찾는 중…' : isHere ? '◎ ' + esc(here.label) : '◎ 현재 위치'}</button>`
+    + places.map(p => `<button type="button" class="chip" role="radio" aria-checked="${p.label === cur}" data-place="${p.id}">${esc(short(p.label))}</button>`).join('')
+    + (temp ? `<button type="button" class="chip" role="radio" aria-checked="true" data-temp>📍 ${esc(short(temp))}</button>` : '')
+    + (canSave ? '<button type="button" class="chip add" id="placeSaveCur">☆ 이곳 저장</button>' : '')
+    + `<button type="button" class="chip add" id="placeManage">${full ? '✎ 자주 걷는 곳 고치기' : '＋ 주소로 추가'}</button>`;
+  $('#originNow').innerHTML = cur ? `📍 <b>${esc(cur)}</b>에서 출발해요` : '출발지를 골라 주세요';
+  $('#originNow').classList.toggle('empty', !cur);
+  box.querySelector('[data-here]').onclick = locateHere;
   box.querySelectorAll('[data-place]').forEach(b => b.onclick = async () => {
-    const p = places.find(x => String(x.id) === b.dataset.place); $('#origin').value = p.label;
+    const p = places.find(x => String(x.id) === b.dataset.place); setOrigin(p.label);
     try { places = (await api(`/v1/me/places/${p.id}/select`, { method: 'POST', body: '{}' })).places; renderPlaces(); } catch { /* 표시만 */ }
   });
   $('#placeManage').onclick = () => openPlaces();
+  const sv = $('#placeSaveCur');
+  if (sv) sv.onclick = async () => {
+    sv.disabled = true;
+    if (isHere) { if (await addPlace(here.coords)) setOrigin(places.find(p => p.selected)?.label ?? cur); }
+    else if (await addPlace(temp)) setOrigin(places.find(p => p.selected)?.label ?? cur); else openPlaces(temp);
+    renderPlaces();
+  };
   $('#placeList').innerHTML = places.map(p => `<li><span>${p.selected ? '✓ ' : ''}${esc(p.label)}</span><button type="button" class="ghost small" data-del="${p.id}">지우기</button></li>`).join('') || '<li class="muted">아직 저장한 곳이 없습니다.</li>';
   $('#placeList').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { places = (await api(`/v1/me/places/${b.dataset.del}/delete`, { method: 'POST', body: '{}' })).places; renderPlaces(); });
   if ($('#placeAdd')) syncPlaceButtons();
 }
-async function loadPlaces() { try { places = (await api('/v1/me/places')).places; renderPlaces(); const s = places.find(p => p.selected); if (s && !$('#origin').value) $('#origin').value = s.label; } catch { /* 부가 기능 */ } }
+async function loadPlaces() { try { places = (await api('/v1/me/places')).places; renderPlaces(); const s = places.find(p => p.selected); if (s && !$('#origin').value) setOrigin(s.label); } catch { /* 부가 기능 */ } }
 async function addPlace(text) {
   $('#placeMsg').textContent = '';
   try { const r = await api('/v1/me/places', { method: 'POST', body: JSON.stringify({ text }) }); places = r.places; renderPlaces(); toast(`'${r.place.label}'을 저장했어요`); return true; }
@@ -243,16 +263,16 @@ async function openPostcode(query) {
 }
 function syncPlaceButtons() {
   const full = places.length >= 5;
-  $('#postcodeOpen').disabled = full || !$('#placeInput').value.trim();
-  $('#placeAdd').disabled = full || !pickedPlace;
-  $('#placeInput').disabled = full; if (full) $('#placeInput').placeholder = '5곳이 찼어요. 아래에서 하나를 지운 뒤 추가해 주세요';
+  $('#postcodeOpen').disabled = !$('#placeInput').value.trim();
+  $('#placeAdd').disabled = full || !pickedPlace; $('#placeOnce').disabled = !pickedPlace;
+  if (full) $('#placeInput').placeholder = '5곳이 찼어요(저장은 하나를 지운 뒤, 이번만 쓰기는 가능)';
   else $('#placeInput').placeholder = '동네·도로명 입력 (예: 망원동)';
 }
 function setPicked(coarse) { pickedPlace = coarse || null; $('#placePicked').hidden = !pickedPlace; $('#placePickedText').textContent = pickedPlace ?? ''; syncPlaceButtons(); if (pickedPlace) $('#placeAdd').focus(); }
 function openPlaces(query = '') {
   $('#settingsDialog').open && $('#settingsDialog').close();
   $('#placeMsg').textContent = ''; $('#placeInput').value = query; closePostcode(); renderPlaces(); setPicked(null); $('#placesDialog').showModal();
-  if (places.length < 5) { if (query) openPostcode(query); else setTimeout(() => $('#placeInput').focus(), 50); }
+  if (query) openPostcode(query); else setTimeout(() => $('#placeInput').focus(), 50);
 }
 $('#placeInput').addEventListener('input', () => { if (pickedPlace) setPicked(null); else syncPlaceButtons(); });
 $('#placeForm').addEventListener('submit', e => { e.preventDefault(); const q = $('#placeInput').value.trim(); $('#placeMsg').textContent = ''; if (!q) { $('#placeMsg').textContent = '찾을 동네나 도로명을 먼저 입력해 주세요.'; return; } openPostcode(q); });
@@ -262,10 +282,10 @@ $('#placeAdd').onclick = async () => {
   if (!pickedPlace) { $('#placeMsg').textContent = '찾기에서 주소를 먼저 골라 주세요.'; return; }
   const btn = $('#placeAdd'); btn.disabled = true; btn.textContent = '저장 중…';
   const ok = await addPlace(pickedPlace); btn.textContent = '저장';
-  if (ok) { $('#placeInput').value = ''; setPicked(null); const s = places.find(p => p.selected); if (s) $('#origin').value = s.label; } else syncPlaceButtons();
+  if (ok) { $('#placeInput').value = ''; setPicked(null); $('#placesDialog').close(); closePostcode(); const s = places.find(p => p.selected); if (s) setOrigin(s.label); } else syncPlaceButtons();
 };
 // ☆ 저장: 현재 위치(좌표)는 그대로 저장하고, 글자로 적은 출발지는 주소 찾기를 거쳐 저장한다
-$('#btnSavePlace').onclick = () => { const v = originValue(); if (!v) return openPlaces(); if (/^\s*-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?\s*$/.test(v)) return addPlace(v); openPlaces(v); };
+$('#placeOnce').onclick = () => { if (!pickedPlace) return; const v = pickedPlace; $('#placeInput').value = ''; setPicked(null); closePostcode(); $('#placesDialog').close(); setOrigin(v); toast(`이번에는 '${v}'에서 출발해요`); };
 
 // ---------- 오늘의 북 워킹(하루 한 번 말풍선, 음성은 버튼을 눌렀을 때만) ----------
 let tipData = null, tipAudio = null, tipUrl = null;
@@ -287,7 +307,7 @@ async function showDailyTip() {
   } catch { /* 부가 기능: 실패하면 보이지 않음 */ }
 }
 $('#todayTipClose').onclick = hideTip;
-$('#todayTipMore').onclick = () => { const a = tipData?.action; hideTip(); if (!a) return; $('#origin').value = a.origin; sel.situation = a.situation; sel.date = 'today'; drawForm(); $('#planForm').requestSubmit(); };
+$('#todayTipMore').onclick = () => { const a = tipData?.action; hideTip(); if (!a) return; setOrigin(a.origin); sel.situation = a.situation; sel.date = 'today'; drawForm(); $('#planForm').requestSubmit(); };
 $('#todayTipVoice').onclick = async () => {
   const b = $('#todayTipVoice');
   if (tipAudio && !tipAudio.paused) { tipAudio.pause(); tipAudio.currentTime = 0; b.textContent = '🔊 듣기'; return; }
@@ -320,7 +340,7 @@ async function loadHistory() {
         <div class="acts"><button type="button" class="ghost small" data-view="${p.id}">다시 보기</button><button type="button" class="ghost small" data-again="${p.id}" data-place="${esc(p.sigungu ?? '')}" data-sit="${esc(p.situation ?? '')}" data-comp="${esc(p.companion ?? '')}">오늘 다시</button></div>
       </div></div>`).join('')}</details>`).join('') + '<p class="muted small-text">플랜은 서비스 개선과 운영을 위해 30일간 보관된 뒤 자동으로 지워집니다.</p>';
     box.querySelectorAll('[data-view]').forEach(b => b.onclick = async () => { try { const r = await api('/v1/plans/' + b.dataset.view); lastPlan = { id: r.id, plan: r.plan, voice: true }; go('plan'); renderPlan(lastPlan); } catch (e) { toast(e.message); } });
-    box.querySelectorAll('[data-again]').forEach(b => b.onclick = () => { $('#origin').value = b.dataset.place; sel.situation = b.dataset.sit || null; sel.companion = ['solo', 'pair', 'family', 'group'].includes(b.dataset.comp) ? b.dataset.comp : null; sel.date = 'today'; go('plan'); drawForm(); $('#planForm').requestSubmit(); });
+    box.querySelectorAll('[data-again]').forEach(b => b.onclick = () => { setOrigin(b.dataset.place); sel.situation = b.dataset.sit || null; sel.companion = ['solo', 'pair', 'family', 'group'].includes(b.dataset.comp) ? b.dataset.comp : null; sel.date = 'today'; go('plan'); drawForm(); $('#planForm').requestSubmit(); });
   } catch (e) { box.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
 }
 $('#btnHistory').onclick = () => go('history');
