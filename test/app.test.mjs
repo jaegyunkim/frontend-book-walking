@@ -22,3 +22,4 @@ test('지도·길찾기·두루누비·목적지 지도는 버튼 모양', () =>
 test("'목적지 상세' 문구는 모두 '상세 정보'로", () => { for (const f of ['index.html', 'app.js']) assert.doesNotMatch(read(f), /목적지 상세/, f); });
 test('오디오 워킹 오류는 버튼 아래 말풍선으로, 토스트와 같은 디자인', () => { const a = read('app.js'), c = read('style.css'); assert.match(a, /bubble\(btn, e\.message\)/); assert.match(a, /bubble\(play, e\.message\)/); assert.match(c, /\.bubble::before \{/); assert.match(c, /\.toast \{[^}]*background: #fff;/); });
 test('머리줄 로고·이름을 누르면 홈(오늘 탭)으로', () => { assert.match(read('index.html'), /<a class="brand" id="brandHome" href="\.\/"/); assert.match(read('app.js'), /\$\('#brandHome'\)\.onclick = e => \{ e\.preventDefault\(\); go\('plan'\); \}/); });
+test('이미 만든 대본은 다시 보기에서 바로 불러온다(다시 만들기 버튼만 보이지 않게)', () => { const a = read('app.js'); assert.match(a, /script: r\.script \?\? null \}; go\('plan'\); renderPlan\(lastPlan\)/); assert.match(a, /if \(script\) makeAudio\(id, voice, \{ saved: true \}\)/); });

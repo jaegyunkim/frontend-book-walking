@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.4.11';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.4.12';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.4.11';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.4.12';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -98,7 +98,7 @@ $('#planForm').onsubmit = async e => {
   finally { clearInterval(tick); btn.disabled = false; btn.textContent = '북 워킹 만들기'; }
 };
 
-// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.4.11): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
+// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.4.12): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
 const WX_ICON = {
   sun: '<circle cx="12" cy="12" r="4.2" class="i-sun"/><path class="i-ray" d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
   moon: '<path class="i-moon" d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>',
@@ -120,7 +120,7 @@ function weatherCard(w, hours) {
   return `<section class="wx-card" aria-label="오늘의 걷기 날씨"><h3>오늘의 걷기 날씨</h3>${chips || tips ? `<div class="wx-status">${chips}${tips ? `<ul class="wx-tips">${tips}</ul>` : ''}</div>` : ''}${cols ? `<div class="wx-hours" style="--n:${hours.length}">${cols}</div>` : ''}</section>`;
 }
 
-function renderPlan({ id, plan: p, voice }) {
+function renderPlan({ id, plan: p, voice, script = null }) {
   const w = p.walk, s = p.weather.short;
   const hours = s?.hourly?.filter(h => h.hour % 2 === 0 || h.precip !== '없음').slice(0, 9) ?? [];
   const courses = p.courses ?? [];
@@ -154,6 +154,7 @@ function renderPlan({ id, plan: p, voice }) {
     <div class="sources">${p.sources.map(x => `<span class="${x.status === 'ok' ? '' : 'bad'}">${esc(x.provider)} ${x.status === 'ok' ? '✓' : esc(x.status)}</span>`).join('')}<p>${esc(p.attribution)}</p><p>AI 상황 고르기 ${esc(p.ai.jev.status)} · 책 순서 맞추기 ${esc(p.ai.rerank.status)}${p.ai.rerank.model ? ` (${esc(p.ai.rerank.model)})` : ''}</p></div>`;
   $('#planResult').querySelectorAll('[data-destination]').forEach(b => b.onclick = () => openDestination(p, destinations[Number(b.dataset.destination)]));
   $('#btnScript').onclick = () => makeAudio(id, voice);
+  if (script) makeAudio(id, voice, { saved: true }); // 이미 만든 대본은 다시 만들지 않고 바로 보여 준다(서버 저장분 · 토큰·횟수 차감 없음)
   $('#planResult').querySelectorAll('[data-shelf]').forEach(b => b.onclick = () => addShelf(JSON.parse(b.dataset.shelf), b));
   $('#planResult').querySelectorAll('[data-diary]').forEach(b => b.onclick = () => { const c = courses[Number(b.dataset.diary)]; $('#diaryCourse').value = c?.name ?? ''; $('#diaryBook').value = p.books[0]?.title ?? ''; go('diary'); });
   $('#planResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -177,9 +178,9 @@ function bubble(anchor, msg, kind = 'warn') {
   b.innerHTML = `<span class="bubble-ico" aria-hidden="true">${kind === 'info' ? 'i' : '!'}</span><span>${esc(msg)}</span>`;
   anchor.insertAdjacentElement('afterend', b);
 }
-async function makeAudio(id, voice) {
+async function makeAudio(id, voice, { saved = false } = {}) {
   const box = $('#audioBox'), btn = $('#btnScript');
-  btn.disabled = true; btn.textContent = '대본 쓰는 중…'; box.querySelectorAll('.bubble').forEach(x => x.remove());
+  btn.disabled = true; btn.textContent = saved ? '만들어 둔 대본 불러오는 중…' : '대본 쓰는 중…'; box.querySelectorAll('.bubble').forEach(x => x.remove());
   try {
     const r = await api(`/v1/plans/${id}/script`, { method: 'POST', body: '{}', timeoutMs: 90000 });
     box.innerHTML = `<h3>🎧 2분 오디오 워킹</h3><p class="script">${esc(r.script)}</p>${r.speechId && voice !== false ? '<button class="primary" type="button" id="btnPlay">음성으로 듣기</button>' : '<p class="muted">음성 합성을 쓸 수 없어 대본만 보여 드려요.</p>'}`;
@@ -280,7 +281,7 @@ function renderPlaces() {
   const isHere = Boolean(here && cur && cur === here.label), saved = places.find(p => p.label === cur);
   const temp = cur && !isHere && !saved ? cur : null; // 기록·추천·이번만 쓰기로 정한 출발지(저장 안 된 곳)
   const canSave = !full && (isHere || temp);
-  // 위계 v0.4.11: ① 선택 결과(배너) ② 현재 위치(큰 버튼) ③ 자주 걷는 곳(2칸 타일) ④ 저장·추가(글자 버튼)
+  // 위계 v0.4.12: ① 선택 결과(배너) ② 현재 위치(큰 버튼) ③ 자주 걷는 곳(2칸 타일) ④ 저장·추가(글자 버튼)
   const tile = (attrs, label, on, tag = '') => `<button type="button" class="origin-tile" role="radio" aria-checked="${on}" ${attrs}>${ORIGIN_ICON[on ? 'check' : 'pin']}<span>${esc(label)}</span>${tag}</button>`;
   box.innerHTML =
     `<button type="button" class="origin-gps" role="radio" aria-checked="${isHere}" data-here${locating ? ' aria-busy="true"' : ''}>${ORIGIN_ICON.gps}<span><b>${locating ? '현재 위치 찾는 중…' : '현재 위치'}</b><small>${isHere ? esc(here.label) : '지금 있는 곳에서 출발'}</small></span>${isHere ? ORIGIN_ICON.check : ''}</button>`
@@ -412,7 +413,7 @@ async function loadHistory() {
         <div class="small-text">${esc(p.course ?? '동네 산책')}${p.book ? ` · 『${esc(p.book)}』` : ''}${p.has_script ? ' · 🎧' : ''}</div>
         <div class="acts"><button type="button" class="ghost small" data-view="${p.id}">다시 보기</button><button type="button" class="ghost small" data-again="${p.id}" data-place="${esc(p.sigungu ?? '')}" data-sit="${esc(p.situation ?? '')}" data-comp="${esc(p.companion ?? '')}">오늘 다시</button></div>
       </div></div>`).join('')}</details>`).join('') + '<p class="muted small-text">플랜은 서비스 개선과 운영을 위해 30일간 보관된 뒤 자동으로 지워져요.</p>';
-    box.querySelectorAll('[data-view]').forEach(b => b.onclick = async () => { try { const r = await api('/v1/plans/' + b.dataset.view); lastPlan = { id: r.id, plan: r.plan, voice: true }; go('plan'); renderPlan(lastPlan); } catch (e) { toast(e.message); } });
+    box.querySelectorAll('[data-view]').forEach(b => b.onclick = async () => { try { const r = await api('/v1/plans/' + b.dataset.view); lastPlan = { id: r.id, plan: r.plan, voice: true, script: r.script ?? null }; go('plan'); renderPlan(lastPlan); } catch (e) { toast(e.message); } });
     box.querySelectorAll('[data-again]').forEach(b => b.onclick = () => { setOrigin(b.dataset.place); sel.situation = b.dataset.sit || null; sel.companion = ['solo', 'pair', 'family', 'group'].includes(b.dataset.comp) ? b.dataset.comp : null; sel.date = 'today'; go('plan'); drawForm(); (skipAskOnce = true, $('#planForm').requestSubmit()); });
   } catch (e) { box.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
 }
