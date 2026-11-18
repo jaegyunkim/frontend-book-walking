@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.11';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.12';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.11';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.12';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -96,7 +96,7 @@ $('#planForm').onsubmit = async e => {
   finally { clearInterval(tick); btn.disabled = false; btn.textContent = '북 워킹 만들기'; }
 };
 
-// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.3.11): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
+// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.3.12): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
 const WX_ICON = {
   sun: '<circle cx="12" cy="12" r="4.2" class="i-sun"/><path class="i-ray" d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
   moon: '<path class="i-moon" d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>',
@@ -255,19 +255,29 @@ document.querySelectorAll('.tabbar button').forEach(b => b.onclick = () => go(b.
 // ---------- 자주 걷는 곳(최대 5곳, 어디물어 '출발지'와 같은 역할) ----------
 let places = [];
 const short = l => String(l).split(' ').slice(-2).join(' ');
+const ORIGIN_ICON = {
+  gps: '<svg class="o-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.6" class="fill"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>',
+  pin: '<svg class="o-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-6.1-6.5-11a6.5 6.5 0 0 1 13 0c0 4.9-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>',
+  check: '<svg class="o-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" class="fill"/><path d="M7.8 12.3l2.8 2.8 5.6-5.8" class="on-fill"/></svg>',
+  flag: '<svg class="o-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-6.1-6.5-11a6.5 6.5 0 0 1 13 0c0 4.9-6.5 11-6.5 11z" class="fill"/><circle cx="12" cy="10" r="2.3" class="hole"/></svg>',
+  star: '<svg class="o-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></svg>',
+  plus: '<svg class="o-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+  edit: '<svg class="o-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+};
 function renderPlaces() {
   const box = $('#placeChips'), cur = $('#origin').value.trim(), full = places.length >= 5;
-  $('#placeCount').textContent = `자주 걷는 곳 ${places.length}/5`; $('#placeCount2').textContent = `${places.length}/5`;
+  $('#placeCount2').textContent = `${places.length}/5`;
   const isHere = Boolean(here && cur && cur === here.label), saved = places.find(p => p.label === cur);
   const temp = cur && !isHere && !saved ? cur : null; // 기록·추천·이번만 쓰기로 정한 출발지(저장 안 된 곳)
   const canSave = !full && (isHere || temp);
+  // 위계 v0.3.12: ① 선택 결과(배너) ② 현재 위치(큰 버튼) ③ 자주 걷는 곳(2칸 타일) ④ 저장·추가(글자 버튼)
+  const tile = (attrs, label, on, tag = '') => `<button type="button" class="origin-tile" role="radio" aria-checked="${on}" ${attrs}>${ORIGIN_ICON[on ? 'check' : 'pin']}<span>${esc(label)}</span>${tag}</button>`;
   box.innerHTML =
-    `<button type="button" class="chip gps" role="radio" aria-checked="${isHere}" data-here>${locating ? '◎ 찾는 중…' : isHere ? '◎ ' + esc(here.label) : '◎ 현재 위치'}</button>`
-    + places.map(p => `<button type="button" class="chip" role="radio" aria-checked="${p.label === cur}" data-place="${p.id}">${esc(short(p.label))}</button>`).join('')
-    + (temp ? `<button type="button" class="chip" role="radio" aria-checked="true" data-temp>📍 ${esc(short(temp))}</button>` : '')
-    + (canSave ? '<button type="button" class="chip add" id="placeSaveCur">☆ 이곳 저장</button>' : '')
-    + `<button type="button" class="chip add" id="placeManage">${full ? '✎ 자주 걷는 곳 고치기' : '＋ 주소로 추가'}</button>`;
-  $('#originNow').innerHTML = cur ? `📍 <b>${esc(cur)}</b>에서 출발해요` : '출발지를 골라 주세요';
+    `<button type="button" class="origin-gps" role="radio" aria-checked="${isHere}" data-here${locating ? ' aria-busy="true"' : ''}>${ORIGIN_ICON.gps}<span><b>${locating ? '현재 위치 찾는 중…' : '현재 위치'}</b><small>${isHere ? esc(here.label) : '지금 있는 곳에서 출발'}</small></span>${isHere ? ORIGIN_ICON.check : ''}</button>`
+    + `<div class="origin-sub"><span>자주 걷는 곳</span><em>${places.length}/5</em></div>`
+    + `<div class="origin-places">${places.map(p => tile(`data-place="${p.id}"`, short(p.label), p.label === cur)).join('')}${temp ? tile('data-temp', short(temp), true, '<em class="origin-tag">이번만</em>') : ''}${!places.length && !temp ? '<p class="origin-empty">자주 걷는 곳을 저장해 두면 한 번에 고를 수 있어요</p>' : ''}</div>`
+    + `<div class="origin-actions">${canSave ? `<button type="button" class="origin-link" id="placeSaveCur">${ORIGIN_ICON.star}이곳 저장</button>` : ''}<button type="button" class="origin-link" id="placeManage">${full ? ORIGIN_ICON.edit + '자주 걷는 곳 고치기' : ORIGIN_ICON.plus + '주소로 추가'}</button></div>`;
+  $('#originNow').innerHTML = cur ? `${ORIGIN_ICON.flag}<span><small>여기서 출발해요</small><b>${esc(cur)}</b></span>` : `${ORIGIN_ICON.flag}<span><small>출발지</small><b>아래에서 골라 주세요</b></span>`;
   $('#originNow').classList.toggle('empty', !cur);
   box.querySelector('[data-here]').onclick = locateHere;
   box.querySelectorAll('[data-place]').forEach(b => b.onclick = async () => {

@@ -1,6 +1,6 @@
-import { policyText, DAY_NOTE } from './role-policy.js?v=0.3.11';
+import { policyText, DAY_NOTE } from './role-policy.js?v=0.3.12';
 document.querySelector('#signupPolicy').textContent = policyText('user') + '. ' + DAY_NOTE;
-import {api} from './auth.js?v=0.3.11';
+import {api} from './auth.js?v=0.3.12';
 const form=document.querySelector('#requestForm');
 const result=document.querySelector('#result');
 const button=document.querySelector('#registerSubmit');
