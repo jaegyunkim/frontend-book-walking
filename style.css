@@ -424,3 +424,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 /* 책 카드 버튼 v0.3.9: '예스24' 링크도 버튼 모양으로, 세 버튼 높이·모양 통일 */
 .book .acts a.yes24 { text-decoration: none; justify-content: center; min-height: 40px; }
 .book .acts .ghost.small { min-height: 40px; padding: 6px 14px; display: inline-flex; align-items: center; justify-content: center; }
+/* 상황 선택 v0.3.10: 12개를 가로 2개 × 세로 6줄, 칸 너비·간격 동일 */
+.chips.sit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.chips.sit-grid .chip { width: 100%; min-width: 0; justify-content: flex-start; gap: 6px; padding: 8px 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
