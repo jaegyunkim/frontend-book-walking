@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.2.2';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.2.3';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.2.2';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.2.3';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -33,14 +33,26 @@ function drawForm() {
 const dateValue = () => ({ today: kstDate(0), tomorrow: kstDate(1), after: kstDate(2), sat: nextSaturday(), sun: kstDate(Math.round((Date.parse(nextSaturday()) - Date.parse(kstDate(0))) / 86400000) + 1) })[sel.date];
 
 // ---------- 플랜 ----------
+// 현재 위치: 화면에는 장소 이름(예: 경남 양산 동면 금오13길, 번지 제외)을 보여 주고, 계산에는 좌표를 그대로 쓴다.
+let here = (() => { try { return JSON.parse(localStorage.getItem('bookwalking.here') || 'null'); } catch { return null; } })(); // { label, coords:'위도,경도' }
+const originValue = () => { const v = $('#origin').value.trim(); return here && v === here.label ? here.coords : v; };
+$('#origin').addEventListener('input', () => { if (here && $('#origin').value.trim() !== here.label) here = null; });
 $('#btnLocate').onclick = () => {
   if (!navigator.geolocation) return toast('이 기기에서는 위치를 쓸 수 없습니다');
-  navigator.geolocation.getCurrentPosition(p => { $('#origin').value = `${p.coords.latitude.toFixed(4)},${p.coords.longitude.toFixed(4)}`; toast('현재 위치를 넣었습니다'); }, () => toast('위치 권한이 없어 동네 이름을 직접 입력해 주세요'), { timeout: 8000, maximumAge: 600000 });
+  const btn = $('#btnLocate'); btn.disabled = true; btn.textContent = '찾는 중…';
+  const done = () => { btn.disabled = false; btn.textContent = '현재 위치'; };
+  navigator.geolocation.getCurrentPosition(async p => {
+    const lat = p.coords.latitude.toFixed(4), lon = p.coords.longitude.toFixed(4), coords = `${lat},${lon}`;
+    let label = null;
+    try { label = (await api(`/v1/place-name?lat=${lat}&lon=${lon}`, { timeoutMs: 10000 })).label; } catch { /* 이름을 못 찾으면 아래 기본 문구 */ }
+    label = label || '현재 위치';
+    here = { label, coords }; localStorage.setItem('bookwalking.here', JSON.stringify(here)); $('#origin').value = label; done(); toast(`현재 위치: ${label}`);
+  }, () => { done(); toast('위치 권한이 없어 동네 이름을 직접 입력해 주세요'); }, { timeout: 8000, maximumAge: 600000 });
 };
 $('#planForm').onsubmit = async e => {
   e.preventDefault();
-  const origin = $('#origin').value.trim(); if (!origin) return;
-  localStorage.setItem('bookwalking.origin', origin);
+  const origin = originValue(); if (!origin) return;
+  localStorage.setItem('bookwalking.origin', $('#origin').value.trim());
   const btn = $('#btnPlan'); btn.disabled = true; btn.textContent = '데이터 모으는 중…';
   const steps = ['기상청 예보', '에어코리아 미세먼지', '두루누비 걷기길', '예스24 상황별 베스트', 'Jev 도서 매칭', '주변 서점·관광지'];
   let i = 0; $('#planResult').innerHTML = `<div class="loading">북 워킹을 만들고 있어요 · <b id="stepName">${steps[0]}</b></div>`;
@@ -253,7 +265,7 @@ $('#placeAdd').onclick = async () => {
   if (ok) { $('#placeInput').value = ''; setPicked(null); const s = places.find(p => p.selected); if (s) $('#origin').value = s.label; } else syncPlaceButtons();
 };
 // ☆ 저장: 현재 위치(좌표)는 그대로 저장하고, 글자로 적은 출발지는 주소 찾기를 거쳐 저장한다
-$('#btnSavePlace').onclick = () => { const v = $('#origin').value.trim(); if (!v) return openPlaces(); if (/^\s*-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?\s*$/.test(v)) return addPlace(v); openPlaces(v); };
+$('#btnSavePlace').onclick = () => { const v = originValue(); if (!v) return openPlaces(); if (/^\s*-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?\s*$/.test(v)) return addPlace(v); openPlaces(v); };
 
 // ---------- 오늘의 북 워킹(하루 한 번 말풍선, 음성은 버튼을 눌렀을 때만) ----------
 let tipData = null, tipAudio = null, tipUrl = null;
