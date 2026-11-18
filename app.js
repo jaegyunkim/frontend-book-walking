@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.2.0';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.2.1';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.2.0';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.2.1';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -191,7 +191,7 @@ let places = [];
 function renderPlaces() {
   const box = $('#placeChips');
   $('#placeCount').textContent = `${places.length}/5`; $('#placeCount2').textContent = `${places.length}/5`;
-  box.innerHTML = places.map(p => `<button type="button" class="chip" role="radio" aria-checked="${p.selected}" data-place="${p.id}">📍 ${esc(p.label.split(' ').slice(-2).join(' '))}</button>`).join('') + '<button type="button" class="chip" id="placeManage">＋ 관리</button>';
+  box.innerHTML = places.map(p => `<button type="button" class="chip" role="radio" aria-checked="${p.selected}" data-place="${p.id}">📍 ${esc(p.label.split(' ').slice(-2).join(' '))}</button>`).join('') + `<button type="button" class="chip" id="placeManage">${places.length >= 5 ? '장소 지우기' : '＋ 장소 추가'}</button>`;
   box.querySelectorAll('[data-place]').forEach(b => b.onclick = async () => {
     const p = places.find(x => String(x.id) === b.dataset.place); $('#origin').value = p.label;
     try { places = (await api(`/v1/me/places/${p.id}/select`, { method: 'POST', body: '{}' })).places; renderPlaces(); } catch { /* 표시만 */ }
