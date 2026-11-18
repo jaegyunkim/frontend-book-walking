@@ -547,3 +547,10 @@ body { word-break: keep-all; overflow-wrap: anywhere; } /* 한국어는 낱말 �
 /* 코스 버튼 v0.4.8: 3칸 격자로 모든 버튼 같은 너비·같은 간격 */
 .course .links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .course .links > * { width: 100%; min-width: 0; padding: 0 6px !important; white-space: nowrap; justify-content: center; }
+/* 말풍선 통일 v0.4.10 — 버튼 아래 말풍선과 화면 아래 토스트를 같은 디자인(흰 바탕·12px 모서리·그림자·색 아이콘)으로 */
+.bubble { position: relative; display: flex; align-items: flex-start; gap: 10px; margin: 12px 0 0; padding: 12px 14px; border-radius: var(--r-sm); background: #fff; color: var(--ink); font-size: 15px; font-weight: 600; line-height: 1.5; box-shadow: 0 6px 18px rgba(31,42,36,.16); max-width: 100%; }
+.bubble::before { content: ""; position: absolute; top: -7px; left: 26px; width: 14px; height: 14px; background: #fff; transform: rotate(45deg); border-radius: 2px; }
+.bubble-ico { flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--warn); color: #fff; font-size: 13px; font-weight: 900; margin-top: 1px; }
+.bubble.info .bubble-ico { background: var(--accent); }
+.bubble.error .bubble-ico { background: var(--bad); }
+.toast { border-radius: var(--r-sm); padding: 12px 16px; background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 8px 24px rgba(31,42,36,.22); border-left: 5px solid var(--accent); max-width: min(92%, 420px); }

@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.4.9';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.4.10';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.4.9';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.4.10';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -98,7 +98,7 @@ $('#planForm').onsubmit = async e => {
   finally { clearInterval(tick); btn.disabled = false; btn.textContent = '북 워킹 만들기'; }
 };
 
-// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.4.9): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
+// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.4.10): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
 const WX_ICON = {
   sun: '<circle cx="12" cy="12" r="4.2" class="i-sun"/><path class="i-ray" d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
   moon: '<path class="i-moon" d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>',
@@ -170,9 +170,16 @@ function courseHtml(c, i, detail) {
     ${c.tip ? `<p class="muted">👣 ${esc(c.tip)}</p>` : ''}${c.safety?.sea ? `<p class="muted">🌊 ${esc(c.safety.sea.name)} 실측 파고 ${c.safety.sea.wave ?? '-'}m · 풍속 ${c.safety.sea.wind ?? '-'}m/s (${esc(c.safety.sea.observedAt)})</p>` : ''}
     <div class="links">${detail}${pointOf(c.start) ? `<a href="https://map.kakao.com/link/map/${encodeURIComponent(c.name + ' 시작점')},${c.start.lat},${c.start.lon}" target="_blank" rel="noopener">지도 보기</a><a href="https://map.kakao.com/link/to/${encodeURIComponent(c.name + ' 시작점')},${c.start.lat},${c.start.lon}" target="_blank" rel="noopener">길찾기</a>` : ''}<a href="https://www.durunubi.kr/" target="_blank" rel="noopener">두루누비</a><a href="#" data-diary="${i}">다녀왔어요</a></div></div>`;
 }
+// 버튼 바로 아래 말풍선(안내·오류). 같은 버튼에 다시 띄우면 바꿔 끼운다. 토스트와 같은 디자인
+function bubble(anchor, msg, kind = 'warn') {
+  anchor.parentElement.querySelectorAll(':scope > .bubble').forEach(b => b.remove());
+  const b = document.createElement('p'); b.className = `bubble ${kind}`; b.setAttribute('role', 'alert');
+  b.innerHTML = `<span class="bubble-ico" aria-hidden="true">${kind === 'info' ? 'i' : '!'}</span><span>${esc(msg)}</span>`;
+  anchor.insertAdjacentElement('afterend', b);
+}
 async function makeAudio(id, voice) {
   const box = $('#audioBox'), btn = $('#btnScript');
-  btn.disabled = true; btn.textContent = '대본 쓰는 중…';
+  btn.disabled = true; btn.textContent = '대본 쓰는 중…'; box.querySelectorAll('.bubble').forEach(x => x.remove());
   try {
     const r = await api(`/v1/plans/${id}/script`, { method: 'POST', body: '{}', timeoutMs: 90000 });
     box.innerHTML = `<h3>🎧 2분 오디오 워킹</h3><p class="script">${esc(r.script)}</p>${r.speechId && voice !== false ? '<button class="primary" type="button" id="btnPlay">음성으로 듣기</button>' : '<p class="muted">음성 합성을 쓸 수 없어 대본만 보여 드려요.</p>'}`;
@@ -183,9 +190,9 @@ async function makeAudio(id, voice) {
         const res = await fetch(`${state.api}/v1/tts/${r.speechId}`, { headers: state.auth?.token ? { Authorization: 'Bearer ' + state.auth.token } : {}, signal: AbortSignal.timeout(90000) });
         if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || 'HTTP ' + res.status); }
         const a = document.createElement('audio'); a.controls = true; a.src = URL.createObjectURL(await res.blob()); play.replaceWith(a); a.play().catch(() => {});
-      } catch (e) { play.disabled = false; play.textContent = '다시 시도'; toast(e.message); }
+      } catch (e) { play.disabled = false; play.textContent = '다시 시도'; bubble(play, e.message); }
     };
-  } catch (e) { btn.disabled = false; btn.textContent = '다시 만들기'; toast(e.message); }
+  } catch (e) { btn.disabled = false; btn.textContent = '다시 만들기'; bubble(btn, e.message); }
 }
 
 // ---------- 상황별 책 / 검색 ----------
@@ -272,7 +279,7 @@ function renderPlaces() {
   const isHere = Boolean(here && cur && cur === here.label), saved = places.find(p => p.label === cur);
   const temp = cur && !isHere && !saved ? cur : null; // 기록·추천·이번만 쓰기로 정한 출발지(저장 안 된 곳)
   const canSave = !full && (isHere || temp);
-  // 위계 v0.4.9: ① 선택 결과(배너) ② 현재 위치(큰 버튼) ③ 자주 걷는 곳(2칸 타일) ④ 저장·추가(글자 버튼)
+  // 위계 v0.4.10: ① 선택 결과(배너) ② 현재 위치(큰 버튼) ③ 자주 걷는 곳(2칸 타일) ④ 저장·추가(글자 버튼)
   const tile = (attrs, label, on, tag = '') => `<button type="button" class="origin-tile" role="radio" aria-checked="${on}" ${attrs}>${ORIGIN_ICON[on ? 'check' : 'pin']}<span>${esc(label)}</span>${tag}</button>`;
   box.innerHTML =
     `<button type="button" class="origin-gps" role="radio" aria-checked="${isHere}" data-here${locating ? ' aria-busy="true"' : ''}>${ORIGIN_ICON.gps}<span><b>${locating ? '현재 위치 찾는 중…' : '현재 위치'}</b><small>${isHere ? esc(here.label) : '지금 있는 곳에서 출발'}</small></span>${isHere ? ORIGIN_ICON.check : ''}</button>`
