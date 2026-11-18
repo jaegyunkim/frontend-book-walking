@@ -526,3 +526,4 @@ h2 { font-size: 22px; letter-spacing: -0.3px; } h3 { font-size: 17px; }
 .login-card h1.login-title em { display: inline; font-size: inherit; font-weight: inherit; line-height: inherit; letter-spacing: inherit; }
 .login-feats { flex-wrap: nowrap; gap: 6px; } .login-feats li { padding: 7px 10px; font-size: 13.5px; white-space: nowrap; gap: 5px; }
 .login-card .notes { border-top: 1px solid var(--hair); padding-top: 6px; }
+body { word-break: keep-all; overflow-wrap: anywhere; } /* 한국어는 낱말 단위로 줄바꿈(글자 하나만 다음 줄로 넘어가지 않게) */
