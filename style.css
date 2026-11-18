@@ -360,3 +360,21 @@ details.sec summary { font-weight: 700; min-height: 32px; cursor: pointer; }
 .place-acts .ghost { flex: 1; min-height: 52px; }
 .place-acts .primary { flex: 1.6; }
 #placeAdd { margin-top: 0; }
+/* 만들기 전 안내 팝업 · AI 맞춤 안내 v0.3.1 */
+#askDialog { max-width: 400px; max-height: 90dvh; overflow-y: auto; }
+#askDialog h2 { font-size: 19px; margin: 0 0 8px; }
+.ask-msg { font-size: 15px; line-height: 1.65; color: var(--ink2); margin: 0 0 14px; }
+.ask-msg b { color: var(--accent-text); }
+.ask-box { margin: 0 0 14px; }
+.ask-label { font-size: 14px; font-weight: 700; margin: 0 0 8px; }
+.ask-skip { margin: 4px 0 12px; }
+.ask-acts { display: flex; gap: 8px; }
+.ask-acts .ghost { flex: 1; min-height: 52px; }
+.ask-acts .primary { flex: 1.5; }
+.auto-note { background: #FFF8E6; border-radius: var(--r-sm); padding: 10px 14px; font-size: 14px; color: #7A5A12; margin: 0 0 12px; line-height: 1.55; }
+.top-right .ghost, .admin-link { font-weight: 700; line-height: 1; }
+/* 검수 보정 v0.3.1: 입력칸 옆 버튼 높이 통일, 일기 통계 숫자 통일, 별점 톤 */
+#searchForm { align-items: stretch; } #searchForm .ghost { min-height: 48px; padding: 0 16px; }
+#diaryStats .metric-num, #diaryStats .metric:first-child .metric-num { display: block; width: auto; height: auto; border: 0; font-size: 24px; color: var(--accent-text); }
+.star { color: #DDD8CC; } .star.on { color: #F2B33D; }
+.filters select { min-height: 44px; }

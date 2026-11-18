@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.0';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.1';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.0';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.1';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -50,9 +50,40 @@ function locateHere() {
     locating = false; setOrigin(here.label);
   }, () => { locating = false; renderPlaces(); toast('위치 권한이 없어요. 주소로 추가해 주세요'); }, { timeout: 8000, maximumAge: 600000 });
 }
+// ---------- 만들기 전 안내: 한마디가 비었으면 상황·누구와 고르기를 권하고, 아무것도 없으면 AI 맞춤 추천을 알린다 ----------
+const COMPANIONS = [{ id: 'solo', label: '혼자' }, { id: 'pair', label: '둘이' }, { id: 'family', label: '아이·가족' }, { id: 'group', label: '여럿이' }];
+let skipAskOnce = false; // 오늘의 추천·기록 '오늘 다시'처럼 조건이 정해진 만들기는 묻지 않는다
+const eulReul = w => { const c = String(w).trim().slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? '을' : '를'; };
+const askSkipKey = () => 'bookwalking.askSkip.' + (state.auth?.user?.id ?? '');
+function askBeforePlan() {
+  if ($('#message').value.trim() || (sel.situation && sel.companion) || localStorage.getItem(askSkipKey()) === kstDate(0)) return Promise.resolve(true);
+  const dlg = $('#askDialog'), noSit = !sel.situation, noComp = !sel.companion, none = noSit && noComp;
+  const where = esc($('#origin').value.trim());
+  const refresh = () => {
+    const empty = !sel.situation && !sel.companion;
+    $('#askTitle').textContent = empty ? 'AI가 알아서 골라 드릴까요?' : '이대로 만들어 볼까요?';
+    $('#askMsg').innerHTML = empty
+      ? `상황이나 함께 걷는 분을 골라 주시면 더 꼭 맞는 길과 책을 찾아 드려요.<br>고르지 않으셔도 괜찮아요. 그동안 만들어 주신 북 워킹 기록과 <b>${where}</b>${eulReul($('#origin').value)} 바탕으로 AI가 오늘에 어울리는 길과 책을 골라 드릴게요.`
+      : `${!sel.situation ? '어떤 걷기인지' : '누구와 걷는지'}도 알려 주시면 더 잘 맞춰 드려요. 그대로 두셔도 <b>${where}</b>의 오늘 날씨와 그동안의 기록에 맞춰 골라 드릴게요.`;
+    $('#askGo').textContent = empty ? 'AI에게 맡기기' : '이대로 만들기';
+  };
+  $('#askSituationBox').hidden = !noSit; $('#askCompanionBox').hidden = !noComp;
+  if (noSit) { $('#askSituation').dataset.toggle = '1'; chips($('#askSituation'), situations.filter(x => x.id !== 'rainy').slice(0, 8), sel.situation, v => { sel.situation = v; drawForm(); refresh(); }); }
+  if (noComp) { $('#askCompanion').dataset.toggle = '1'; chips($('#askCompanion'), COMPANIONS, sel.companion, v => { sel.companion = v; drawForm(); refresh(); }); }
+  $('#askSkipToday').checked = false; refresh();
+  return new Promise(ok => {
+    const finish = go => { if (go && $('#askSkipToday').checked) localStorage.setItem(askSkipKey(), kstDate(0)); dlg.onclose = null; dlg.close(); ok(go); };
+    $('#askGo').onclick = () => finish(true);
+    $('#askMessage').onclick = () => { finish(false); go('plan'); $('#message').focus(); $('#message').scrollIntoView({ block: 'center' }); };
+    dlg.onclose = () => ok(false); dlg.oncancel = () => ok(false);
+    dlg.showModal();
+  });
+}
 $('#planForm').onsubmit = async e => {
   e.preventDefault();
   const origin = originValue(); if (!origin) { toast('출발지를 먼저 골라 주세요'); return; }
+  const skip = skipAskOnce; skipAskOnce = false;
+  if (!skip && !(await askBeforePlan())) return;
   localStorage.setItem('bookwalking.origin', $('#origin').value.trim());
   const btn = $('#btnPlan'); btn.disabled = true; btn.textContent = '데이터 모으는 중…';
   const steps = ['기상청 예보', '에어코리아 미세먼지', '두루누비 걷기길', '예스24 상황별 베스트', 'Jev 도서 매칭', '주변 서점·관광지'];
@@ -82,6 +113,7 @@ function renderPlan({ id, plan: p, voice }) {
       <div class="metric"><div class="metric-num">${s?.temp ? `${s.temp.min}~${s.temp.max}°` : p.weather.mid?.temp?.min != null ? `${p.weather.mid.temp.min}~${p.weather.mid.temp.max}°` : '-'}</div><div class="metric-label">${esc(p.dateLabel.slice(5))} 기온</div></div>
       <div class="metric"><div class="metric-num">${p.weather.air ? esc(p.weather.air.gradeName) : s?.popMax != null ? s.popMax + '%' : '-'}</div><div class="metric-label">${p.weather.air ? `미세먼지 PM10 ${p.weather.air.pm10 ?? '-'}` : '강수확률 최대'}</div></div>
     </div>
+    ${p.auto ? `<p class="auto-note">✨ AI 맞춤 추천 · ${p.auto.basis === 'history' ? `최근 북 워킹 ${p.auto.plans}번의 기록에서 자주 고르신 '${esc(p.situation.label)}'${p.auto.companion ? '·' + esc(({ solo: '혼자', pair: '둘이', family: '아이·가족', group: '여럿이' })[p.auto.companion] ?? '') : ''}을(를)` : '오늘 날씨에 맞춰 상황을'} 골랐어요. 출발지는 ${esc(p.place)}.</p>` : ''}
     <div class="card-lines">${p.card.map(l => `<p>${esc(l)}</p>`).join('')}</div>
     <ul class="reasons">${(w.reasons.length ? w.reasons : w.gate === 'caution' ? [`걷기 지수 ${w.score}점: 기온·바람 조건이 조금 아쉬워요`] : []).map(r => `<li>${esc(r)}</li>`).join('')}${w.tips.map(t => `<li>💡 ${esc(t)}</li>`).join('')}</ul>
     ${hours.length ? `<div class="hours">${hours.map(h => `<div class="hour">${esc(h.time)}<b>${h.temp ?? '-'}°</b>${esc(h.precip && h.precip !== '없음' ? h.precip : h.sky ?? '')}<div class="pop">${h.pop ?? 0}%</div></div>`).join('')}</div>` : ''}
@@ -307,7 +339,7 @@ async function showDailyTip() {
   } catch { /* 부가 기능: 실패하면 보이지 않음 */ }
 }
 $('#todayTipClose').onclick = hideTip;
-$('#todayTipMore').onclick = () => { const a = tipData?.action; hideTip(); if (!a) return; setOrigin(a.origin); sel.situation = a.situation; sel.date = 'today'; drawForm(); $('#planForm').requestSubmit(); };
+$('#todayTipMore').onclick = () => { const a = tipData?.action; hideTip(); if (!a) return; setOrigin(a.origin); sel.situation = a.situation; sel.date = 'today'; drawForm(); (skipAskOnce = true, $('#planForm').requestSubmit()); };
 $('#todayTipVoice').onclick = async () => {
   const b = $('#todayTipVoice');
   if (tipAudio && !tipAudio.paused) { tipAudio.pause(); tipAudio.currentTime = 0; b.textContent = '🔊 듣기'; return; }
@@ -340,7 +372,7 @@ async function loadHistory() {
         <div class="acts"><button type="button" class="ghost small" data-view="${p.id}">다시 보기</button><button type="button" class="ghost small" data-again="${p.id}" data-place="${esc(p.sigungu ?? '')}" data-sit="${esc(p.situation ?? '')}" data-comp="${esc(p.companion ?? '')}">오늘 다시</button></div>
       </div></div>`).join('')}</details>`).join('') + '<p class="muted small-text">플랜은 서비스 개선과 운영을 위해 30일간 보관된 뒤 자동으로 지워집니다.</p>';
     box.querySelectorAll('[data-view]').forEach(b => b.onclick = async () => { try { const r = await api('/v1/plans/' + b.dataset.view); lastPlan = { id: r.id, plan: r.plan, voice: true }; go('plan'); renderPlan(lastPlan); } catch (e) { toast(e.message); } });
-    box.querySelectorAll('[data-again]').forEach(b => b.onclick = () => { setOrigin(b.dataset.place); sel.situation = b.dataset.sit || null; sel.companion = ['solo', 'pair', 'family', 'group'].includes(b.dataset.comp) ? b.dataset.comp : null; sel.date = 'today'; go('plan'); drawForm(); $('#planForm').requestSubmit(); });
+    box.querySelectorAll('[data-again]').forEach(b => b.onclick = () => { setOrigin(b.dataset.place); sel.situation = b.dataset.sit || null; sel.companion = ['solo', 'pair', 'family', 'group'].includes(b.dataset.comp) ? b.dataset.comp : null; sel.date = 'today'; go('plan'); drawForm(); (skipAskOnce = true, $('#planForm').requestSubmit()); });
   } catch (e) { box.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
 }
 $('#btnHistory').onclick = () => go('history');
