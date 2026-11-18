@@ -12,3 +12,4 @@ test('오늘의 걷기 날씨 카드: 상태 칩·팁·시간별 예보 한 카�
 test('하단 메뉴 아래로 본문이 비치지 않게 흰 배경을 아래로 늘인다', () => assert.match(read('style.css'), /\.tabbar::after \{[^}]*top: 100%;[^}]*background: #fff;/));
 test('책장 버튼 문구: 예스24 · 일기 쓰기 · 책장 정리', () => { const a = read('app.js'); assert.match(a, />일기 쓰기<\/button>/); assert.match(a, />책장 정리<\/button>/); assert.doesNotMatch(a, />빼기<|일기에 쓰기|예스24에서 보기</); });
 test('상황 선택은 가로 2칸 격자(같은 너비·간격)', () => { assert.match(read('index.html'), /id="bookSituationChips" class="chips wrap sit-grid"/); assert.match(read('style.css'), /\.chips\.sit-grid \{ display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/); });
+test('오디오 워킹 제목에 AI 모델 이름을 표시하지 않는다', () => assert.doesNotMatch(read('app.js'), /2분 오디오 워킹 <small[^<]*\$\{[^}]*r\.model/));
