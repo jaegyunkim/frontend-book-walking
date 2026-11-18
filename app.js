@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.6';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.7';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.6';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.7';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -96,6 +96,28 @@ $('#planForm').onsubmit = async e => {
   finally { clearInterval(tick); btn.disabled = false; btn.textContent = '북 워킹 만들기'; }
 };
 
+// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.3.7): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
+const WX_ICON = {
+  sun: '<circle cx="12" cy="12" r="4.2" class="i-sun"/><path class="i-ray" d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
+  moon: '<path class="i-moon" d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>',
+  partly: '<circle cx="9" cy="9" r="3.4" class="i-sun"/><path class="i-ray" d="M9 2.8v1.5M2.8 9h1.5M4.6 4.6l1 1M13.4 4.6l-1 1"/><path class="i-cloud" d="M8 19h9a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.6 1.3A2.9 2.9 0 0 0 8 19z"/>',
+  cloud: '<path class="i-cloud" d="M7 18.5h10a4 4 0 0 0 .4-8 5.6 5.6 0 0 0-10.8 1.5A3.3 3.3 0 0 0 7 18.5z"/>',
+  rain: '<path class="i-cloud" d="M7 15h10a3.8 3.8 0 0 0 .4-7.6 5.4 5.4 0 0 0-10.4 1.4A3.1 3.1 0 0 0 7 15z"/><path class="i-drop" d="M8.5 18l-1 2.5M12.5 18l-1 2.5M16.5 18l-1 2.5"/>',
+  snow: '<path class="i-cloud" d="M7 15h10a3.8 3.8 0 0 0 .4-7.6 5.4 5.4 0 0 0-10.4 1.4A3.1 3.1 0 0 0 7 15z"/><path class="i-snow" d="M8 19h.01M12 20.5h.01M16 19h.01"/>',
+};
+const wxKind = h => { const p = h.precip && h.precip !== '없음' ? h.precip : ''; if (/눈/.test(p) && !/비/.test(p)) return 'snow'; if (p) return 'rain';
+  if (h.sky === '흐림') return 'cloud'; if (h.sky === '구름많음') return 'partly'; return h.hour >= 18 || h.hour < 6 ? 'moon' : 'sun'; };
+const wxSvg = k => `<svg class="wx-ico" viewBox="0 0 24 24" aria-hidden="true">${WX_ICON[k]}</svg>`;
+const GATE_ICON = { go: '<path d="M7 12.5l3.2 3.2L17 9"/>', caution: '<path d="M12 7.5v5.5M12 16.5h.01"/>', indoor: '<path d="M8 8l8 8M16 8l-8 8"/>' };
+function weatherCard(w, hours) {
+  const reasons = w.reasons.length ? w.reasons : w.gate === 'caution' ? [`걷기 지수 ${w.score}점: 기온·바람 조건이 조금 아쉬워요`] : [];
+  const chips = reasons.map(r => `<span class="wx-chip ${esc(w.gate)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/>${GATE_ICON[w.gate] ?? GATE_ICON.go}</svg>${esc(r)}</span>`).join('');
+  const tips = w.tips.map(t => `<li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>${esc(t)}</li>`).join('');
+  const cols = hours.map((h, i) => `<div class="wx-hour${i === 0 ? ' now' : ''}"><span class="t">${esc(h.time)}</span>${wxSvg(wxKind(h))}<b>${h.temp ?? '-'}°</b><span class="sky">${esc(h.precip && h.precip !== '없음' ? h.precip : h.sky ?? '')}</span><span class="pop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5s-6 6.6-6 10.8a6 6 0 0 0 12 0C18 10.1 12 3.5 12 3.5z"/></svg>${h.pop ?? 0}%</span></div>`).join('');
+  if (!chips && !tips && !cols) return '';
+  return `<section class="wx-card" aria-label="오늘의 걷기 날씨"><h3>오늘의 걷기 날씨</h3>${chips || tips ? `<div class="wx-status">${chips}${tips ? `<ul class="wx-tips">${tips}</ul>` : ''}</div>` : ''}${cols ? `<div class="wx-hours" style="--n:${hours.length}">${cols}</div>` : ''}</section>`;
+}
+
 function renderPlan({ id, plan: p, voice }) {
   const w = p.walk, s = p.weather.short;
   const hours = s?.hourly?.filter(h => h.hour % 2 === 0 || h.precip !== '없음').slice(0, 9) ?? [];
@@ -115,8 +137,7 @@ function renderPlan({ id, plan: p, voice }) {
     </div>
     ${p.auto ? `<p class="auto-note">✨ AI 맞춤 추천 · ${p.auto.basis === 'history' ? `최근 북 워킹 ${p.auto.plans}번의 기록에서 자주 고르신 '${esc(p.situation.label)}'${p.auto.companion ? '·' + esc(({ solo: '혼자', pair: '둘이', family: '아이·가족', group: '여럿이' })[p.auto.companion] ?? '') : ''}을(를)` : '오늘 날씨에 맞춰 상황을'} 골랐어요. 출발지는 ${esc(p.place)}.</p>` : ''}
     <div class="card-lines">${p.card.map(l => `<p>${esc(l)}</p>`).join('')}</div>
-    <ul class="reasons">${(w.reasons.length ? w.reasons : w.gate === 'caution' ? [`걷기 지수 ${w.score}점: 기온·바람 조건이 조금 아쉬워요`] : []).map(r => `<li>${esc(r)}</li>`).join('')}${w.tips.map(t => `<li>💡 ${esc(t)}</li>`).join('')}</ul>
-    ${hours.length ? `<div class="hours">${hours.map(h => `<div class="hour">${esc(h.time)}<b>${h.temp ?? '-'}°</b>${esc(h.precip && h.precip !== '없음' ? h.precip : h.sky ?? '')}<div class="pop">${h.pop ?? 0}%</div></div>`).join('')}</div>` : ''}
+    ${weatherCard(w, hours)}
     <div class="audio" id="audioBox"><h3>🎧 2분 오디오 워킹</h3><p class="muted">날씨·코스·책을 엮은 대본을 AI가 쓰고 음성으로 읽어 드려요. 걷기 직전에 들어 보세요.</p><button class="primary" type="button" id="btnScript">오디오 워킹 만들기</button></div>
     <div class="sec"><h3>📚 오늘의 책 <small>${esc(p.situation.emoji)} ${esc(p.situation.label)} · 예스24 베스트</small></h3>${p.books.map(b => bookHtml(b, p.situation.id)).join('') || '<p class="empty">책을 불러오지 못했습니다</p>'}</div>
     <div class="sec"><h3>🚶 걷기 코스 <small>두루누비 · 출발지 반경 ${p.courseSearch?.radiusKm ?? '-'}km</small></h3>${courses.map((c, i) => courseHtml(c, i, detailButton(c, '걷기 코스 시작점', c.start ?? null))).join('') || '<p class="empty">가까운 코리아둘레길 코스가 없습니다</p>'}</div>
