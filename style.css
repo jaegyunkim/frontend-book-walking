@@ -535,3 +535,5 @@ body { word-break: keep-all; overflow-wrap: anywhere; } /* 한국어는 낱말 �
 #loginForm .field > span { font-size: 16px; margin-bottom: 8px; }
 #loginForm input { min-height: 54px; font-size: 17px; }
 .login-hero { object-position: 25% 60%; -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent); mask-image: linear-gradient(to bottom, #000 72%, transparent); }
+/* v0.4.6 로그인 배너: 처음의 단순한 평면 그림(언덕·산책길·나무·해·펼친 책)으로 되돌림 — 흐림 처리 없이 또렷하게 */
+.login-hero { height: 170px; object-position: center; -webkit-mask-image: none; mask-image: none; }
