@@ -544,3 +544,6 @@ body { word-break: keep-all; overflow-wrap: anywhere; } /* 한국어는 낱말 �
 .links .ghost { min-height: 44px; }
 .dest-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .links > * { margin: 0 !important; } .links .ghost { font-size: 14px; padding: 0 14px; }
+/* 코스 버튼 v0.4.8: 3칸 격자로 모든 버튼 같은 너비·같은 간격 */
+.course .links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.course .links > * { width: 100%; min-width: 0; padding: 0 6px !important; white-space: nowrap; justify-content: center; }
