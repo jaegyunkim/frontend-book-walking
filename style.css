@@ -418,3 +418,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .wx-ico .i-sun { fill: #F4B92E; } .wx-ico .i-ray { stroke: #F4B92E; stroke-width: 1.8; }
 .wx-ico .i-moon { fill: #F2D27A; } .wx-ico .i-cloud { fill: #DCE3EA; stroke: #A9B6C3; stroke-width: 1.2; }
 .wx-ico .i-drop { stroke: var(--sky); stroke-width: 1.8; } .wx-ico .i-snow { stroke: #7FA7CF; stroke-width: 3; }
+/* 하단 메뉴 아래 비침 수정 v0.3.8: iOS 사파리가 주소창·도구막대를 접을 때 고정 하단 메뉴가 화면 끝보다 위에 머물러 그 아래로 본문이 비친다
+   → 메뉴 흰 배경을 화면 아래쪽으로 길게 늘여 틈을 덮는다(메뉴 위치·크기는 그대로) */
+.tabbar::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 100vh; background: #fff; pointer-events: none; }
