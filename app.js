@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.12';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.13';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.12';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.13';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -17,16 +17,18 @@ function nextSaturday() { const d = new Date(Date.now() + 9 * 3600000); const ad
 
 // ---------- 칩 ----------
 function chips(el, items, current, onPick) {
-  el.innerHTML = items.map(i => `<button type="button" class="chip" role="radio" aria-checked="${i.id === current}" data-id="${esc(i.id)}">${i.emoji ? i.emoji + ' ' : ''}${esc(i.label)}</button>`).join('');
+  el.innerHTML = items.map(i => `<button type="button" class="chip${i.sub ? ' two' : ''}" role="radio" aria-checked="${i.id === current}" data-id="${esc(i.id)}">${i.emoji ? `<span class="chip-emo" aria-hidden="true">${i.emoji}</span>` : ''}${i.sub ? `<span class="chip-main">${esc(i.label)}</span><span class="chip-sub">${esc(i.sub)}</span>` : esc(i.label)}</button>`).join('');
   el.onclick = e => { const b = e.target.closest('.chip'); if (!b) return; const id = b.dataset.id; const next = id === current && el.dataset.toggle ? null : id; current = next; el.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-checked', String(c.dataset.id === next))); onPick(next); };
 }
 function drawForm() {
   const sat = nextSaturday();
-  chips($('#dateChips'), [{ id: 'today', label: '오늘' }, { id: 'tomorrow', label: '내일' }, { id: 'after', label: '모레' }, { id: 'sat', label: `토요일(${sat.slice(5).replace('-', '/')})` }, { id: 'sun', label: '일요일' }], sel.date, v => { sel.date = v ?? 'today'; });
+  const md = d => `${+d.slice(5, 7)}/${+d.slice(8)} ${'일월화수목금토'[new Date(d + 'T00:00:00Z').getUTCDay()]}`; // 11/18 수
+  const sun = kstDate(Math.round((Date.parse(sat) - Date.parse(kstDate(0))) / 86400000) + 1);
+  chips($('#dateChips'), [{ id: 'today', label: '오늘', sub: md(kstDate(0)) }, { id: 'tomorrow', label: '내일', sub: md(kstDate(1)) }, { id: 'after', label: '모레', sub: md(kstDate(2)) }, { id: 'sat', label: '토요일', sub: md(sat) }, { id: 'sun', label: '일요일', sub: md(sun) }], sel.date, v => { sel.date = v ?? 'today'; });
   $('#situationChips').dataset.toggle = '1';
   chips($('#situationChips'), situations, sel.situation, v => { sel.situation = v; });
   $('#companionChips').dataset.toggle = '1';
-  chips($('#companionChips'), [{ id: 'solo', label: '혼자' }, { id: 'pair', label: '둘이' }, { id: 'family', label: '아이·가족' }, { id: 'group', label: '여럿이' }], sel.companion, v => { sel.companion = v; });
+  chips($('#companionChips'), [{ id: 'solo', emoji: '🚶', label: '혼자' }, { id: 'pair', emoji: '👫', label: '둘이' }, { id: 'family', emoji: '👨‍👩‍👧', label: '아이·가족' }, { id: 'group', emoji: '👥', label: '여럿이' }], sel.companion, v => { sel.companion = v; });
   chips($('#bookSituationChips'), situations, sel.bookSituation, v => { sel.bookSituation = v ?? 'solo_walk'; loadBooks(); });
   const saved = localStorage.getItem('bookwalking.origin'); if (saved && !$('#origin').value) setOrigin(saved); else renderPlaces();
 }
@@ -96,7 +98,7 @@ $('#planForm').onsubmit = async e => {
   finally { clearInterval(tick); btn.disabled = false; btn.textContent = '북 워킹 만들기'; }
 };
 
-// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.3.12): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
+// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.3.13): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
 const WX_ICON = {
   sun: '<circle cx="12" cy="12" r="4.2" class="i-sun"/><path class="i-ray" d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
   moon: '<path class="i-moon" d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>',
@@ -270,7 +272,7 @@ function renderPlaces() {
   const isHere = Boolean(here && cur && cur === here.label), saved = places.find(p => p.label === cur);
   const temp = cur && !isHere && !saved ? cur : null; // 기록·추천·이번만 쓰기로 정한 출발지(저장 안 된 곳)
   const canSave = !full && (isHere || temp);
-  // 위계 v0.3.12: ① 선택 결과(배너) ② 현재 위치(큰 버튼) ③ 자주 걷는 곳(2칸 타일) ④ 저장·추가(글자 버튼)
+  // 위계 v0.3.13: ① 선택 결과(배너) ② 현재 위치(큰 버튼) ③ 자주 걷는 곳(2칸 타일) ④ 저장·추가(글자 버튼)
   const tile = (attrs, label, on, tag = '') => `<button type="button" class="origin-tile" role="radio" aria-checked="${on}" ${attrs}>${ORIGIN_ICON[on ? 'check' : 'pin']}<span>${esc(label)}</span>${tag}</button>`;
   box.innerHTML =
     `<button type="button" class="origin-gps" role="radio" aria-checked="${isHere}" data-here${locating ? ' aria-busy="true"' : ''}>${ORIGIN_ICON.gps}<span><b>${locating ? '현재 위치 찾는 중…' : '현재 위치'}</b><small>${isHere ? esc(here.label) : '지금 있는 곳에서 출발'}</small></span>${isHere ? ORIGIN_ICON.check : ''}</button>`
