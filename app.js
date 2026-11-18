@@ -1,6 +1,8 @@
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
 import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncExpiry, remaining, sessionMinutes } from './auth.js?v=0.1.7';
 
+import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
+const openDestination = createDestinationDialog(document, api);
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const safeUrl = u => /^https:\/\//.test(u ?? '') ? u : null;
@@ -53,7 +55,13 @@ function renderPlan({ id, plan: p, voice }) {
   const w = p.walk, s = p.weather.short;
   const hours = s?.hourly?.filter(h => h.hour % 2 === 0 || h.precip !== '없음').slice(0, 9) ?? [];
   const courses = p.courses ?? [];
-  const nearbyList = (arr, title, note = '') => arr?.length ? `<div class="sec"><h3>${title}<small>${note}</small></h3><ul class="places">${arr.map(x => `<li><span>${safeUrl(x.url) ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>` : esc(x.name)} <small class="muted">${esc(x.category ?? x.type ?? '')}</small></span><span class="d">${x.distanceM != null ? km(x.distanceM) : ''}</span></li>`).join('')}</ul></div>` : '';
+  const destinations = [];
+  function detailButton(item, kind, point = item) {
+    if (!item.name || !pointOf(point)) return '<small class="muted">상세 위치 미제공</small>';
+    const index = destinations.push({ ...item, ...pointOf(point), kind }) - 1;
+    return `<button type="button" class="ghost small dest-open" data-destination="${index}" aria-label="${esc(item.name)} 목적지 상세">목적지 상세</button>`;
+  }
+  const nearbyList = (arr, title, note = '') => arr?.length ? `<div class="sec"><h3>${title}<small>${note}</small></h3><ul class="places">${arr.map(x => `<li><span>${safeUrl(x.url) ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>` : esc(x.name)} <small class="muted">${esc(x.category ?? x.type ?? '')}</small><br>${detailButton(x, x.category ?? x.type ?? title)}</span><span class="d">${x.distanceM != null ? km(x.distanceM) : ''}</span></li>`).join('')}</ul></div>` : '';
   $('#planResult').innerHTML = `
     <div class="metric-strip">
       <div class="metric"><div class="metric-num ${w.gate}">${w.score}</div><div class="metric-label">${esc(w.gateName)}</div></div>
@@ -65,16 +73,17 @@ function renderPlan({ id, plan: p, voice }) {
     ${hours.length ? `<div class="hours">${hours.map(h => `<div class="hour">${esc(h.time)}<b>${h.temp ?? '-'}°</b>${esc(h.precip && h.precip !== '없음' ? h.precip : h.sky ?? '')}<div class="pop">${h.pop ?? 0}%</div></div>`).join('')}</div>` : ''}
     <div class="audio" id="audioBox"><h3>🎧 2분 오디오 워킹</h3><p class="muted">날씨·코스·책을 엮은 대본을 AI가 쓰고 음성으로 읽어 드려요. 걷기 직전에 들어 보세요.</p><button class="primary" type="button" id="btnScript">오디오 워킹 만들기</button></div>
     <div class="sec"><h3>📚 오늘의 책 <small>${esc(p.situation.emoji)} ${esc(p.situation.label)} · 예스24 베스트</small></h3>${p.books.map(b => bookHtml(b, p.situation.id)).join('') || '<p class="empty">책을 불러오지 못했습니다</p>'}</div>
-    <div class="sec"><h3>🚶 걷기 코스 <small>두루누비 · 출발지 반경 ${p.courseSearch?.radiusKm ?? '-'}km</small></h3>${courses.map(courseHtml).join('') || '<p class="empty">가까운 코리아둘레길 코스가 없습니다</p>'}</div>
+    <div class="sec"><h3>🚶 걷기 코스 <small>두루누비 · 출발지 반경 ${p.courseSearch?.radiusKm ?? '-'}km</small></h3>${courses.map((c, i) => courseHtml(c, i, detailButton(c, '걷기 코스 시작점', c.start ?? null))).join('') || '<p class="empty">가까운 코리아둘레길 코스가 없습니다</p>'}</div>
     ${nearbyList((p.nearby.parks ?? []).filter(x => !/화장실|주차장|매점|관리사무소/.test(x.name + x.category)), '🌳 동네 산책', '출발지 3km 안 공원')}
     ${nearbyList(p.indoor, '☔ 실내에서 읽기', '도서관·북카페')}
     ${nearbyList(p.nearby.bookstores, '🏬 코스 근처 서점', '카카오 로컬')}
     ${nearbyList(p.nearby.spots, '📍 코스 근처 관광지', '한국관광공사')}
-    ${p.nearby.camps?.length ? `<div class="sec"><h3>🏕️ 근처 캠핑장 <small>한국관광공사 고캠핑</small></h3><ul class="places">${p.nearby.camps.map(c => `<li><span>${safeUrl(c.homepage) ? `<a href="${esc(c.homepage)}" target="_blank" rel="noopener">${esc(c.name)}</a>` : esc(c.name)} <small class="muted">${esc(c.type ?? '')}</small><br><small class="muted">${esc(c.address ?? '')}</small></span><a class="d" href="https://map.kakao.com/link/to/${encodeURIComponent(c.name)},${c.lat},${c.lon}" target="_blank" rel="noopener">길찾기</a></li>`).join('')}</ul></div>` : ''}
+    ${p.nearby.camps?.length ? `<div class="sec"><h3>🏕️ 근처 캠핑장 <small>한국관광공사 고캠핑</small></h3><ul class="places">${p.nearby.camps.map(c => `<li><span>${safeUrl(c.homepage) ? `<a href="${esc(c.homepage)}" target="_blank" rel="noopener">${esc(c.name)}</a>` : esc(c.name)} <small class="muted">${esc(c.type ?? '')}</small><br><small class="muted">${esc(c.address ?? '')}</small><br>${detailButton(c, '캠핑장')}</span><a class="d" href="https://map.kakao.com/link/to/${encodeURIComponent(c.name)},${c.lat},${c.lon}" target="_blank" rel="noopener">길찾기</a></li>`).join('')}</ul></div>` : ''}
     ${p.drive ? `<div class="sec"><h3>🚗 캠핑장까지 <small>카카오모빌리티·오피넷·ITS</small></h3><p>${esc(p.drive.to)}까지 약 <b>${p.drive.distanceKm ?? '-'}km · ${p.drive.minutes ?? '-'}분</b>${p.drive.toll ? `, 통행료 ${p.drive.toll.toLocaleString()}원` : ''}${p.drive.fuel ? `, 왕복 기름값 약 ${p.drive.fuel.estimateKrw.toLocaleString()}원` : ''}</p>${p.drive.fuel ? `<p class="muted">${esc(p.drive.fuel.basis)} (휘발유 ${p.drive.fuel.price}원/L)</p>` : ''}${p.drive.incidents.length ? `<ul class="reasons">${p.drive.incidents.slice(0, 3).map(x => `<li>${esc(x.road ?? '')} ${esc(x.type ?? '')}: ${esc(x.message)}</li>`).join('')}</ul>` : '<p class="muted">경로 주변 돌발상황 없음(현재 기준)</p>'}</div>` : ''}
     ${p.crowd ? `<div class="sec"><h3>👥 방문 혼잡 <small>${esc(p.crowd.note)}</small></h3><p>${esc(p.crowd.name)} 같은 요일 평균 방문자는 평소의 <b>${Math.round(p.crowd.ratio * 100)}%</b> — ${esc(p.crowd.crowd)}</p></div>` : ''}
     ${p.weather.message ? `<details class="sec"><summary>기상청 예보관 통보문</summary><p class="muted" style="white-space:pre-line">${esc(p.weather.message)}</p></details>` : ''}
     <div class="sources">${p.sources.map(x => `<span class="${x.status === 'ok' ? '' : 'bad'}">${esc(x.provider)} ${x.status === 'ok' ? '✓' : esc(x.status)}</span>`).join('')}<p>${esc(p.attribution)}</p><p>AI: Jev 상황 분류 ${esc(p.ai.jev.status)} · 도서 재순위화 ${esc(p.ai.rerank.status)}${p.ai.rerank.model ? ` (${esc(p.ai.rerank.model)})` : ''}</p></div>`;
+  $('#planResult').querySelectorAll('[data-destination]').forEach(b => b.onclick = () => openDestination(p, destinations[Number(b.dataset.destination)]));
   $('#btnScript').onclick = () => makeAudio(id, voice);
   $('#planResult').querySelectorAll('[data-shelf]').forEach(b => b.onclick = () => addShelf(JSON.parse(b.dataset.shelf), b));
   $('#planResult').querySelectorAll('[data-diary]').forEach(b => b.onclick = () => { const c = courses[Number(b.dataset.diary)]; $('#diaryCourse').value = c?.name ?? ''; $('#diaryBook').value = p.books[0]?.title ?? ''; go('diary'); });
@@ -84,13 +93,13 @@ function bookHtml(b, situation) {
   const data = esc(JSON.stringify({ itemId: b.itemId, isbn13: b.isbn13, title: b.title, author: b.author, cover: b.cover, link: b.link, situation }));
   return `<div class="book">${safeUrl(b.cover) ? `<img src="${esc(b.cover)}" alt="" loading="lazy">` : '<div></div>'}<div><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author)}${b.publisher ? ' · ' + esc(b.publisher) : ''}${b.category ? ' · ' + esc(b.category) : ''}${b.rank ? ` · ${b.rank}위` : ''}</div>${b.intro ? `<div class="i">${esc(b.intro)}</div>` : ''}<div class="acts">${safeUrl(b.link) ? `<a href="${esc(b.link)}" target="_blank" rel="noopener">예스24에서 보기</a>` : ''}<button class="ghost small" type="button" data-shelf="${data}">책장에 담기</button></div></div></div>`;
 }
-function courseHtml(c, i) {
+function courseHtml(c, i, detail) {
   const g = c.safety?.gate;
   return `<div class="course"><div><b>${esc(c.name)}</b> ${g ? `<span class="tag ${g}">${g === 'go' ? '해안 안전' : g === 'caution' ? '해안 주의' : '해안 금지'}</span>` : ''}${c.coastal && !g ? '<span class="tag caution">해안길</span>' : ''}</div>
     <div class="meta">출발지에서 ${c.travelKm}km · 코스 ${c.distanceKm ?? '-'}km · ${c.minutes ? Math.round(c.minutes / 6) / 10 + '시간' : '-'} · ${esc(c.levelName ?? '')} · ${esc(c.sigun ?? '')}</div>
     ${c.summary ? `<p>${esc(c.summary.split('\n')[0].replace(/^-\s*/, ''))}</p>` : ''}
     ${c.tip ? `<p class="muted">👣 ${esc(c.tip)}</p>` : ''}${c.safety?.sea ? `<p class="muted">🌊 ${esc(c.safety.sea.name)} 실측 파고 ${c.safety.sea.wave ?? '-'}m · 풍속 ${c.safety.sea.wind ?? '-'}m/s (${esc(c.safety.sea.observedAt)})</p>` : ''}
-    <div class="links">${c.start ? `<a href="https://map.kakao.com/link/map/${encodeURIComponent(c.name + ' 시작점')},${c.start.lat},${c.start.lon}" target="_blank" rel="noopener">시작점 지도</a><a href="https://map.kakao.com/link/to/${encodeURIComponent(c.name + ' 시작점')},${c.start.lat},${c.start.lon}" target="_blank" rel="noopener">길찾기</a>` : ''}<a href="https://www.durunubi.kr/" target="_blank" rel="noopener">두루누비</a><a href="#" data-diary="${i}">다녀왔어요</a></div></div>`;
+    <div class="links">${detail}${pointOf(c.start) ? `<a href="https://map.kakao.com/link/map/${encodeURIComponent(c.name + ' 시작점')},${c.start.lat},${c.start.lon}" target="_blank" rel="noopener">시작점 지도</a><a href="https://map.kakao.com/link/to/${encodeURIComponent(c.name + ' 시작점')},${c.start.lat},${c.start.lon}" target="_blank" rel="noopener">길찾기</a>` : ''}<a href="https://www.durunubi.kr/" target="_blank" rel="noopener">두루누비</a><a href="#" data-diary="${i}">다녀왔어요</a></div></div>`;
 }
 async function makeAudio(id, voice) {
   const box = $('#audioBox'), btn = $('#btnScript');
@@ -330,7 +339,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // ---------- 로그인 ----------
 function showLogin(msg = '') {
   timer?.stop(); timer = null; hideTip(); applyAiLock(null);
-  for (const d of ['#settingsDialog', '#placesDialog', '#pwDialog', '#logoutDialog']) if ($(d).open) $(d).close();
+  for (const d of ['#settingsDialog', '#placesDialog', '#pwDialog', '#logoutDialog', '#destinationDialog']) if ($(d).open) $(d).close();
   $('#appView').hidden = true; $('#loginView').hidden = false; $('#loginMsg').textContent = msg; $('#btnAdmin').hidden = true;
   $('#sessionMinutesNote').textContent = state.sessionMinutes ?? 30;
   const id = localStorage.getItem('bookwalking.loginId'); if (id) { $('#loginId').value = id; $('#rememberId').checked = true; }

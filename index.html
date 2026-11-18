@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=0.1.7">
+  <link rel="stylesheet" href="style.css?v=0.1.8">
 </head>
 <body>
   <!-- 로그인 -->
@@ -39,6 +39,23 @@
   </section>
 
   <!-- 첫 로그인 비밀번호 변경 -->
+  <dialog id="destinationDialog" aria-labelledby="destTitle">
+    <header class="dest-head"><div><p class="eyebrow">목적지 상세</p><h2 id="destTitle"></h2></div><button id="destClose" class="ghost" type="button" autofocus>닫기</button></header>
+    <div id="destInfo"></div>
+    <form id="destForm">
+      <p id="destFrom" class="muted"></p>
+      <label id="destOriginField" class="field" hidden><span>이 기록의 출발지 (주소 또는 위도,경도)</span><input id="destOrigin" maxlength="160" required></label>
+      <label class="field"><span>목적지까지 이동수단</span><select id="destMode"><option value="walk">도보</option><option value="bike">자전거</option><option value="transit">대중교통</option><option value="car">자동차</option></select></label>
+      <fieldset id="destCar" hidden disabled><legend>차량 비용 조건</legend>
+        <label class="field"><span>차량 종류</span><select id="destVehicle"><option value="gasoline">휘발유차</option><option value="ev">전기차</option></select></label>
+        <div class="dest-inputs"><label class="field"><span id="destEfficiencyLabel">연비 (km/L)</span><input id="destEfficiency" type="number" min="0" max="100" step="any" inputmode="decimal" placeholder="기본값"></label>
+        <label class="field"><span id="destPriceLabel">휘발유 가격 (원/L)</span><input id="destPrice" type="number" min="0" max="10000" step="any" inputmode="decimal" placeholder="자동 적용"></label></div>
+        <p class="muted">비워 두면 기본 연비·전비와 오피넷 휘발유가 또는 설정 단가를 사용합니다.</p>
+      </fieldset>
+      <button class="primary block" id="destSubmit" type="submit">이 조건으로 조회</button>
+    </form>
+    <div id="destResult" aria-live="polite"></div>
+  </dialog>
   <dialog id="pwDialog">
     <form id="pwForm" method="dialog">
       <h2>새 비밀번호를 정해 주세요</h2>
@@ -159,8 +176,8 @@
       <button data-tab="opinion" type="button"><span aria-hidden="true">💬</span>의견</button>
     </nav>
   </div>
-  <script src="config.js?v=0.1.7"></script>
-  <script src="telemetry.js?v=0.1.7"></script>
-  <script src="app.js?v=0.1.7" type="module"></script>
+  <script src="config.js?v=0.1.8"></script>
+  <script src="telemetry.js?v=0.1.8"></script>
+  <script src="app.js?v=0.1.8" type="module"></script>
 </body>
 </html>

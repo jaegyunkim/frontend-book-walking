@@ -188,3 +188,20 @@ dialog .row.end { justify-content: flex-end; margin-top: 14px; } .row.between { 
 .top-right .ghost, .admin-link { white-space: nowrap; padding: 8px 10px; font-size: 13px; }
 .top-right .icon-btn { min-width: 40px; }
 @media (max-width: 480px) { .brand small { display: none; } .brand b { font-size: 16px; } .brand img { width: 26px; height: 26px; } .timer { font-size: 12px; } .top-right { gap: 4px; } .top-right .icon-btn { min-width: 38px; font-size: 16px; } }
+
+/* 목적지 상세: 작은 화면에서도 입력·조회 결과를 한 열로 읽는다. */
+#destinationDialog { max-width: 560px; max-height: 88vh; max-height: 88dvh; overflow-y: auto; overscroll-behavior: contain; overflow-wrap: anywhere; }
+.dest-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.dest-head .eyebrow { margin-bottom: 3px; }
+.dest-head button { flex: none; }
+.dest-open { margin: 4px 8px 4px 0; min-height: 44px; }
+#destInfo { padding-bottom: 12px; border-bottom: 1px solid var(--hair); }
+#destInfo p, #destResult p { margin: 6px 0; }
+#destCar { min-width: 0; margin: 0 0 14px; padding: 12px; border: 1px solid var(--hair); }
+#destCar legend { font-weight: 700; }
+.dest-inputs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+#destResult section { margin-top: 16px; border-top: 1px solid var(--hair); padding-top: 12px; }
+#destResult ul { list-style: none; padding: 0; margin: 0; }
+#destResult li { margin: 10px 0; }
+#destResult small { display: block; color: var(--mute); }
+@media (max-width: 390px) { #destinationDialog { padding: 16px; } .dest-inputs { grid-template-columns: 1fr; } }
