@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.2.1';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.2.2';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.2.1';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.2.2';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -196,9 +196,10 @@ function renderPlaces() {
     const p = places.find(x => String(x.id) === b.dataset.place); $('#origin').value = p.label;
     try { places = (await api(`/v1/me/places/${p.id}/select`, { method: 'POST', body: '{}' })).places; renderPlaces(); } catch { /* 표시만 */ }
   });
-  $('#placeManage').onclick = openPlaces;
+  $('#placeManage').onclick = () => openPlaces();
   $('#placeList').innerHTML = places.map(p => `<li><span>${p.selected ? '✓ ' : ''}${esc(p.label)}</span><button type="button" class="ghost small" data-del="${p.id}">지우기</button></li>`).join('') || '<li class="muted">아직 저장한 곳이 없습니다.</li>';
   $('#placeList').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { places = (await api(`/v1/me/places/${b.dataset.del}/delete`, { method: 'POST', body: '{}' })).places; renderPlaces(); });
+  if ($('#placeAdd')) syncPlaceButtons();
 }
 async function loadPlaces() { try { places = (await api('/v1/me/places')).places; renderPlaces(); const s = places.find(p => p.selected); if (s && !$('#origin').value) $('#origin').value = s.label; } catch { /* 부가 기능 */ } }
 async function addPlace(text) {
@@ -206,9 +207,53 @@ async function addPlace(text) {
   try { const r = await api('/v1/me/places', { method: 'POST', body: JSON.stringify({ text }) }); places = r.places; renderPlaces(); toast(`'${r.place.label}'을 저장했어요`); return true; }
   catch (e) { $('#placeMsg').textContent = e.message; toast(e.message); return false; }
 }
-function openPlaces() { $('#settingsDialog').open && $('#settingsDialog').close(); $('#placeMsg').textContent = ''; $('#placeInput').value = ''; renderPlaces(); $('#placesDialog').showModal(); }
-$('#placeAdd').onclick = async () => { const v = $('#placeInput').value.trim(); if (v && await addPlace(v)) $('#placeInput').value = ''; };
-$('#btnSavePlace').onclick = () => { const v = $('#origin').value.trim(); if (!v) return toast('출발지를 먼저 입력해 주세요'); addPlace(/^-?\d/.test(v) ? v : v); };
+// 저장 절차(어디물어 '출발지 추가'와 같음): ① 동네·도로명 입력 → ② 다음(카카오) 우편번호 검색에서 선택 → ③ 저장.
+// 서버에는 시·도 시·군·구 읍·면·동까지만 보낸다(도로명·건물번호는 보내지도 저장하지도 않음).
+let pickedPlace = null, postcodeLoading = null;
+function loadPostcode() {
+  if (window.daum?.Postcode) return Promise.resolve();
+  return postcodeLoading ??= new Promise((ok, no) => {
+    const urls = ['https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js', 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js'];
+    const tryNext = i => { if (i >= urls.length) { postcodeLoading = null; return no(new Error('주소 검색을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')); }
+      const s = document.createElement('script'); s.src = urls[i]; s.async = true; s.onload = () => ok(); s.onerror = () => { s.remove(); tryNext(i + 1); }; document.head.appendChild(s); };
+    tryNext(0);
+  });
+}
+function closePostcode() { $('#postcodeWrap').hidden = true; $('#postcodeBox').innerHTML = ''; }
+const coarseAddress = d => [d.sido, d.sigungu, d.bname1 || d.bname || ''].filter(Boolean).join(' ');
+async function openPostcode(query) {
+  try { await loadPostcode(); } catch (e) { $('#placeMsg').textContent = e.message; return; }
+  const wrap = $('#postcodeWrap'), box = $('#postcodeBox'); box.innerHTML = ''; wrap.hidden = false;
+  new window.daum.Postcode({ width: '100%', height: '100%', oncomplete: d => {
+    closePostcode(); $('#placeInput').value = d.roadAddress || d.jibunAddress || coarseAddress(d); setPicked(coarseAddress(d));
+  } }).embed(box, { q: query, autoClose: false });
+  wrap.scrollIntoView({ block: 'nearest' });
+}
+function syncPlaceButtons() {
+  const full = places.length >= 5;
+  $('#postcodeOpen').disabled = full || !$('#placeInput').value.trim();
+  $('#placeAdd').disabled = full || !pickedPlace;
+  $('#placeInput').disabled = full; if (full) $('#placeInput').placeholder = '5곳이 찼어요. 아래에서 하나를 지운 뒤 추가해 주세요';
+  else $('#placeInput').placeholder = '동네·도로명 입력 (예: 망원동)';
+}
+function setPicked(coarse) { pickedPlace = coarse || null; $('#placePicked').hidden = !pickedPlace; $('#placePickedText').textContent = pickedPlace ?? ''; syncPlaceButtons(); if (pickedPlace) $('#placeAdd').focus(); }
+function openPlaces(query = '') {
+  $('#settingsDialog').open && $('#settingsDialog').close();
+  $('#placeMsg').textContent = ''; $('#placeInput').value = query; closePostcode(); renderPlaces(); setPicked(null); $('#placesDialog').showModal();
+  if (places.length < 5) { if (query) openPostcode(query); else setTimeout(() => $('#placeInput').focus(), 50); }
+}
+$('#placeInput').addEventListener('input', () => { if (pickedPlace) setPicked(null); else syncPlaceButtons(); });
+$('#placeForm').addEventListener('submit', e => { e.preventDefault(); const q = $('#placeInput').value.trim(); $('#placeMsg').textContent = ''; if (!q) { $('#placeMsg').textContent = '찾을 동네나 도로명을 먼저 입력해 주세요.'; return; } openPostcode(q); });
+$('#postcodeClose').onclick = closePostcode;
+$('#placesClose').onclick = () => { closePostcode(); $('#placesDialog').close(); };
+$('#placeAdd').onclick = async () => {
+  if (!pickedPlace) { $('#placeMsg').textContent = '찾기에서 주소를 먼저 골라 주세요.'; return; }
+  const btn = $('#placeAdd'); btn.disabled = true; btn.textContent = '저장 중…';
+  const ok = await addPlace(pickedPlace); btn.textContent = '저장';
+  if (ok) { $('#placeInput').value = ''; setPicked(null); const s = places.find(p => p.selected); if (s) $('#origin').value = s.label; } else syncPlaceButtons();
+};
+// ☆ 저장: 현재 위치(좌표)는 그대로 저장하고, 글자로 적은 출발지는 주소 찾기를 거쳐 저장한다
+$('#btnSavePlace').onclick = () => { const v = $('#origin').value.trim(); if (!v) return openPlaces(); if (/^\s*-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?\s*$/.test(v)) return addPlace(v); openPlaces(v); };
 
 // ---------- 오늘의 북 워킹(하루 한 번 말풍선, 음성은 버튼을 눌렀을 때만) ----------
 let tipData = null, tipAudio = null, tipUrl = null;
@@ -312,7 +357,7 @@ async function openSettings() {
 }
 $('#btnSettings').onclick = openSettings;
 $('#btnHistory2').onclick = () => { $('#settingsDialog').close(); go('history'); };
-$('#btnPlaces').onclick = openPlaces;
+$('#btnPlaces').onclick = () => openPlaces();
 $('#btnPw').onclick = () => { $('#settingsDialog').close(); openPw(false); };
 function showNotice(title, msg) { const d = $('#noticeDialog'); if (d.open) return; $('#noticeTitle').textContent = title; $('#noticeMsg').textContent = msg; try { d.showModal(); } catch { /* 로그인 화면 문구로 안내 */ } }
 
