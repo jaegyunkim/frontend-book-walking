@@ -1,7 +1,7 @@
-import { ROLE_LABEL, policyText, DAY_NOTE } from './role-policy.js?v=0.3.1';
+import { ROLE_LABEL, policyText, DAY_NOTE } from './role-policy.js?v=0.3.2';
 import { approvalMailto } from './approval-email.js?v=0.1.7';
 // 북 워킹 관리자 화면(backend-go-fishing/frontend-go-fishing 운영관리와 동일 구성 + 플랜·코스 탭): 계정·세션·사용량·대화 로그·로그인/작업 기록. 관리자 계정으로 로그인한 탭에서만 동작.
-import { state, api, health, startTimer, syncAccount, setOnAuthLost, logout } from './auth.js?v=0.3.1';
+import { state, api, health, startTimer, syncAccount, setOnAuthLost, logout } from './auth.js?v=0.3.2';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const dt = v => v ? new Date(v).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
@@ -106,19 +106,19 @@ const views = {
   async users() {
     const [{ users }, { capacity }] = await Promise.all([api('/v1/admin/users'), api('/v1/admin/capacity')]);
     view.innerHTML = `<div class="tool"><h2>사용자 ${users.length}명</h2><div class="acts"><button id="add">+ 계정 발급</button></div></div>${capBar(capacity)}
-    <details class="card"><summary>역할별 고정 한도 확인</summary>${policyGuide()}</details>
+    <details class="card"><summary>역할별 기본 한도 확인</summary>${policyGuide()}</details>
     <div class="scroll"><table class="tbl"><tr><th>아이디</th><th>닉네임</th><th>역할·상태</th><th class="num">오늘 질문</th><th class="num">오늘 토큰</th><th class="num">로그인</th><th>세션 한도</th><th>기기·최근 로그인</th><th>작업</th></tr>
     ${users.map(u => `<tr><td><b>${esc(u.loginId)}</b></td><td><span>${esc(u.displayName || '미설정')}${u.memo ? ' · ' + esc(u.memo) : ''}</span><br><button class="mini-btn" data-detail="opinions" data-id="${u.id}" data-login="${esc(u.loginId)}"${u.opinionCount ? '' : ' disabled title="보낸 의견이 없습니다"'}>의견 ${n(u.opinionCount)}</button></td>
       <td>${roleText(u.role)} <span class="sub">${u.role === 'user' ? '· 1기기' : '· 동시 접속 허용'}</span><br><span class="pill ${u.status === 'active' ? 'ok' : 'bad'}">${u.status === 'active' ? '사용' : '중지'}</span>${u.lockedUntil && new Date(u.lockedUntil) > new Date() ? ' <span class="pill warn">잠김</span>' : ''}${u.activeSessions ? ' <span class="pill ok">접속 중</span>' : ''}${u.mustChangePassword ? ' <span class="pill warn">비번 변경 대기</span>' : ''}</td>
       <td class="num">${n(u.today.messages)}/${n(u.limits.dailyMessages)}${u.today.blocked ? `<br><span class="sub">거절 ${u.today.blocked}</span>` : ''}<br><button class="mini-btn" data-detail="questions" data-id="${u.id}" data-login="${esc(u.loginId)}">질문</button></td><td class="num">${n(u.today.tokens)}/${n(u.limits.dailyTokens)}<br><button class="mini-btn" data-detail="usage" data-id="${u.id}" data-login="${esc(u.loginId)}">토큰</button></td>
-      <td class="num">${n(u.today.sessions)}<br><span class="sub">하루 ${n(u.limits.dailySessions)}회</span></td><td>${u.limits.sessionMinutes}분 · 질문 ${u.limits.sessionMessages}</td><td>${esc(devPlat(u.device))}<br>${esc(devBrowser(u.device))}<br>${dt(u.lastLoginAt)}${u.nextLoginAt?`<br><span class="sub">재이용 ${dt(u.nextLoginAt)} (KST)</span>`:""}<br><button class="mini-btn" data-detail="logins" data-id="${u.id}" data-login="${esc(u.loginId)}">위치</button></td>
-      <td><div class="acts" data-id="${u.id}" data-login="${esc(u.loginId)}"><button data-a="role">권한 변경</button><button data-a="reset">비번 초기화</button>${u.lockedUntil ? '<button data-a="unlock">잠금 해제</button>' : ''}
+      <td class="num">${n(u.today.sessions)}<br><span class="sub">하루 ${n(u.limits.dailySessions)}회</span></td><td>${u.limits.sessionMinutes}분 · 질문 ${u.limits.sessionMessages}${u.customLimits ? '<br><span class="pill warn">개별 한도</span>' : ''}</td><td>${esc(devPlat(u.device))}<br>${esc(devBrowser(u.device))}<br>${dt(u.lastLoginAt)}${u.nextLoginAt?`<br><span class="sub">재이용 ${dt(u.nextLoginAt)} (KST)</span>`:""}<br><button class="mini-btn" data-detail="logins" data-id="${u.id}" data-login="${esc(u.loginId)}">위치</button></td>
+      <td><div class="acts" data-id="${u.id}" data-login="${esc(u.loginId)}"><button data-a="limits">한도</button><button data-a="role">권한 변경</button><button data-a="reset">비번 초기화</button>${u.lockedUntil ? '<button data-a="unlock">잠금 해제</button>' : ''}
         <button data-a="toggle" class="${u.status === 'active' ? 'danger' : ''}">${u.status === 'active' ? '중지' : '재개'}</button><button data-a="chats">대화</button></div></td></tr>`).join('')}</table></div>`;
     view.querySelectorAll('[data-detail]').forEach(b => b.onclick = () => go(b.dataset.detail === 'opinions' ? 'opinions' : 'user_' + b.dataset.detail, { user: b.dataset.id, label: b.dataset.login }));
     $('#add').onclick = async () => {
       const r = await dialog(`<h2>계정 발급</h2><label>아이디 (베타 테스터는 이메일, 관리자·내부 테스터는 영문 아이디도 가능)<input name="loginId" required maxlength="254"></label><label>이름<input name="displayName" required maxlength="40"></label>
         <label>역할<select name="role"><option value="user">베타 테스터 (한 기기만)</option><option value="tester">내부 테스터 (동시 접속 허용)</option><option value="admin">관리자 (동시 접속 허용)</option></select></label><label>메모<input name="memo" maxlength="100"></label>
-        <p class="hint">선택한 역할의 고정 한도가 적용됩니다.</p>${policyGuide()}`,
+        <p class="hint">선택한 역할의 기본 한도가 적용됩니다. 만든 뒤 사용자 목록의 "한도"에서 이 계정만 따로 바꿀 수 있습니다.</p>${policyGuide()}`,
         fd => api('/v1/admin/users', { method: 'POST', body: JSON.stringify(Object.fromEntries(fd)) }).catch(e => ({ error: e.message })));
       if (r?.error) return note(r.error, true);
       if (r?.user?.tempPassword) await showSecret(`${r.user.loginId} 계정을 만들었습니다`, r.user.tempPassword);
@@ -128,6 +128,18 @@ const views = {
       const box = b.parentElement, id = box.dataset.id, login = box.dataset.login, u = users.find(x => String(x.id) === id);
       const patch = body => api(`/v1/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
       try {
+        if (b.dataset.a === 'limits') {
+          const F = [['sessionMinutes', '세션 시간(분)', 5, 240], ['sessionMessages', '세션당 질문', 1, 500], ['dailyMessages', '하루 질문', 1, 1000], ['dailySessions', '하루 로그인', 1, 100], ['dailyTokens', '하루 AI 토큰', 100, 1000000]];
+          const base = u.roleLimits ?? {};
+          const r = await dialog(`<h2>${esc(login)} 한도</h2><p class="hint">${roleText(u.role)} 기본값은 괄호 안 숫자입니다. 이 계정만 따로 바꿀 수 있습니다.</p>
+            <div class="grid2">${F.map(([k, label, lo, hi]) => `<label>${label} <span class="sub">(기본 ${n(base[k])})</span><input name="${k}" type="number" inputmode="numeric" min="${lo}" max="${hi}" step="1" required value="${u.limits[k]}"></label>`).join('')}</div>
+            <label class="inline"><input type="checkbox" name="resetLimits" value="1"> 역할 기본값으로 되돌리기</label>
+            <p class="hint">질문·토큰·로그인 한도는 저장 즉시 적용됩니다. 세션 시간은 이용 중인 세션에도 로그인 시각 기준으로 바로 반영됩니다. 하루 기준은 한국시간 0시입니다. 권한을 바꾸면 그 역할의 기본 한도로 다시 맞춰집니다.</p>`,
+            fd => fd.get('resetLimits') ? patch({ resetLimits: true }).catch(e => ({ error: e.message })) : patch({ limits: Object.fromEntries(F.map(([k]) => [k, Number(fd.get(k))])) }).catch(e => ({ error: e.message })));
+          if (r?.error) return note(r.error, true);
+          if (r) { note(`${login} 한도를 저장했습니다`); views.users(); }
+          return;
+        }
         if (b.dataset.a === 'role') {
           const r = await dialog(`<h2>${esc(login)} 권한 변경</h2>${policyGuide()}<label>역할<select name="role">${['user', 'tester', 'admin'].map(x => `<option value="${x}"${x === u.role ? ' selected' : ''}>${roleText(x)}</option>`).join('')}</select></label>
             <p class="hint">베타 테스터: 한 기기에서만 로그인 · 내부 테스터·관리자: 여러 기기 동시 접속 허용 · 관리자만 이 관리자 페이지를 쓸 수 있습니다.<br>권한을 바꾸면 이 계정의 이용 중인 세션은 종료되고, 다시 로그인할 때 새 권한이 적용됩니다.</p>`,
