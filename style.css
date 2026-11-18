@@ -485,3 +485,14 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .chips.who-grid .chip { width: 100%; flex-direction: column; justify-content: center; gap: 4px; min-height: 66px; padding: 8px 2px; border-radius: var(--r-sm); font-size: 14px; }
 .chips.who-grid .chip-emo { font-size: 22px; }
 .plan-form textarea { min-height: 76px; border-radius: var(--r-sm); line-height: 1.5; }
+/* 제목·버튼 구분 v0.3.14 — 제목은 배경 없는 글자, 고르는 버튼은 회색 바탕·그림자로 '누르는 것'처럼 */
+.plan-form > .field > span { font-size: 17px; letter-spacing: -0.2px; }
+.plan-form > .field > span::before { width: 22px; height: 22px; background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); font-size: 12px; }
+.origin-now { background: transparent; border-radius: 0; border-left: 4px solid var(--accent); padding: 4px 0 4px 12px; margin-bottom: 14px; }
+.origin-now.empty { background: transparent; border-left-color: var(--warn); }
+.plan-form .chip, .plan-form .origin-tile { background: #F4F3EE; border-color: transparent; box-shadow: 0 1px 0 rgba(31,42,36,.10), 0 1px 3px rgba(31,42,36,.06); }
+.plan-form .chip:active, .plan-form .origin-tile:active { transform: translateY(1px); box-shadow: none; }
+.plan-form .chip[aria-checked="true"] { background: var(--accent); border-color: var(--accent); box-shadow: 0 2px 8px rgba(47,107,79,.30); }
+.plan-form .origin-tile[aria-checked="true"] { background: var(--accent-soft); border-color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.origin-gps { box-shadow: 0 1px 3px rgba(31,42,36,.08); }
+.origin-sub { margin-top: 18px; }
