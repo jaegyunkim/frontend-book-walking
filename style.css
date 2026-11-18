@@ -421,3 +421,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 /* 하단 메뉴 아래 비침 수정 v0.3.8: iOS 사파리가 주소창·도구막대를 접을 때 고정 하단 메뉴가 화면 끝보다 위에 머물러 그 아래로 본문이 비친다
    → 메뉴 흰 배경을 화면 아래쪽으로 길게 늘여 틈을 덮는다(메뉴 위치·크기는 그대로) */
 .tabbar::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 100vh; background: #fff; pointer-events: none; }
+/* 책 카드 버튼 v0.3.9: '예스24' 링크도 버튼 모양으로, 세 버튼 높이·모양 통일 */
+.book .acts a.yes24 { text-decoration: none; justify-content: center; min-height: 40px; }
+.book .acts .ghost.small { min-height: 40px; padding: 6px 14px; display: inline-flex; align-items: center; justify-content: center; }

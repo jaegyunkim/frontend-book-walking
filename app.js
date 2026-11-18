@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.8';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.3.9';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.8';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.3.9';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -96,7 +96,7 @@ $('#planForm').onsubmit = async e => {
   finally { clearInterval(tick); btn.disabled = false; btn.textContent = '북 워킹 만들기'; }
 };
 
-// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.3.8): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
+// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.3.9): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
 const WX_ICON = {
   sun: '<circle cx="12" cy="12" r="4.2" class="i-sun"/><path class="i-ray" d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
   moon: '<path class="i-moon" d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>',
@@ -158,7 +158,7 @@ function renderPlan({ id, plan: p, voice }) {
 }
 function bookHtml(b, situation) {
   const data = esc(JSON.stringify({ itemId: b.itemId, isbn13: b.isbn13, title: b.title, author: b.author, cover: b.cover, link: b.link, situation }));
-  return `<div class="book">${safeUrl(b.cover) ? `<img src="${esc(b.cover)}" alt="" loading="lazy">` : '<div></div>'}<div><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author)}${b.publisher ? ' · ' + esc(b.publisher) : ''}${b.category ? ' · ' + esc(b.category) : ''}${b.rank ? ` · ${b.rank}위` : ''}</div>${b.intro ? `<div class="i">${esc(b.intro)}</div>` : ''}<div class="acts">${safeUrl(b.link) ? `<a href="${esc(b.link)}" target="_blank" rel="noopener">예스24에서 보기</a>` : ''}<button class="ghost small" type="button" data-shelf="${data}">책장에 담기</button></div></div></div>`;
+  return `<div class="book">${safeUrl(b.cover) ? `<img src="${esc(b.cover)}" alt="" loading="lazy">` : '<div></div>'}<div><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author)}${b.publisher ? ' · ' + esc(b.publisher) : ''}${b.category ? ' · ' + esc(b.category) : ''}${b.rank ? ` · ${b.rank}위` : ''}</div>${b.intro ? `<div class="i">${esc(b.intro)}</div>` : ''}<div class="acts">${safeUrl(b.link) ? `<a href="${esc(b.link)}" target="_blank" rel="noopener" class="ghost small yes24" aria-label="예스24에서 ${esc(b.title)} 보기">예스24</a>` : ''}<button class="ghost small" type="button" data-shelf="${data}">책장에 담기</button></div></div></div>`;
 }
 function courseHtml(c, i, detail) {
   const g = c.safety?.gate;
@@ -213,7 +213,7 @@ async function loadShelf() {
   const el = $('#shelfList');
   try {
     const r = await api('/v1/me/shelf');
-    el.innerHTML = r.books.map(b => `<div class="book">${safeUrl(b.cover) ? `<img src="${esc(b.cover)}" alt="" loading="lazy">` : '<div></div>'}<div><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author ?? '')}</div><div class="acts">${safeUrl(b.link) ? `<a href="${esc(b.link)}" target="_blank" rel="noopener">예스24에서 보기</a>` : ''}<button class="ghost small" type="button" data-use="${esc(b.title)}">일기에 쓰기</button><button class="ghost small" type="button" data-del="${b.itemId}">빼기</button></div></div></div>`).join('') || '<p class="empty">아직 담은 책이 없습니다. 오늘 탭에서 추천받은 책을 담아 보세요.</p>';
+    el.innerHTML = r.books.map(b => `<div class="book">${safeUrl(b.cover) ? `<img src="${esc(b.cover)}" alt="" loading="lazy">` : '<div></div>'}<div><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author ?? '')}</div><div class="acts">${safeUrl(b.link) ? `<a href="${esc(b.link)}" target="_blank" rel="noopener" class="ghost small yes24" aria-label="예스24에서 ${esc(b.title)} 보기">예스24</a>` : ''}<button class="ghost small" type="button" data-use="${esc(b.title)}">일기 쓰기</button><button class="ghost small" type="button" data-del="${b.itemId}" aria-label="${esc(b.title)} 책장에서 빼기">책장 정리</button></div></div></div>`).join('') || '<p class="empty">아직 담은 책이 없습니다. 오늘 탭에서 추천받은 책을 담아 보세요.</p>';
     el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { await api('/v1/me/shelf/' + b.dataset.del, { method: 'DELETE' }); loadShelf(); });
     el.querySelectorAll('[data-use]').forEach(b => b.onclick = () => { $('#diaryBook').value = b.dataset.use; go('diary'); });
   } catch (e) { el.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
