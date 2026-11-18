@@ -534,4 +534,4 @@ body { word-break: keep-all; overflow-wrap: anywhere; } /* 한국어는 낱말 �
 #loginForm .field { margin-bottom: 18px; }
 #loginForm .field > span { font-size: 16px; margin-bottom: 8px; }
 #loginForm input { min-height: 54px; font-size: 17px; }
-.login-hero { object-position: 30% 70%; -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent); mask-image: linear-gradient(to bottom, #000 72%, transparent); }
+.login-hero { object-position: 25% 60%; -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent); mask-image: linear-gradient(to bottom, #000 72%, transparent); }
