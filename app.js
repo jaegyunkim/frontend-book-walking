@@ -98,7 +98,7 @@ $('#planForm').onsubmit = async e => {
   finally { clearInterval(tick); btn.disabled = false; btn.textContent = '북 워킹 만들기'; }
 };
 
-// ---------- 오늘의 걷기 날씨 카드(캔바 시안 v0.4.13): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
+// ---------- 산책 예정일의 날씨 카드(캔바 시안 v0.4.13): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
 const WX_ICON = {
   sun: '<circle cx="12" cy="12" r="4.2" class="i-sun"/><path class="i-ray" d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
   moon: '<path class="i-moon" d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>',
@@ -115,9 +115,9 @@ function weatherCard(w, hours) {
   const reasons = w.reasons.length ? w.reasons : w.gate === 'caution' ? [`걷기 지수 ${w.score}점: 기온·바람 조건이 조금 아쉬워요`] : [];
   const chips = reasons.map(r => `<span class="wx-chip ${esc(w.gate)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/>${GATE_ICON[w.gate] ?? GATE_ICON.go}</svg>${esc(r)}</span>`).join('');
   const tips = w.tips.map(t => `<li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>${esc(t)}</li>`).join('');
-  const cols = hours.map((h, i) => `<div class="wx-hour${i === 0 ? ' now' : ''}"><span class="t">${esc(h.time)}</span>${wxSvg(wxKind(h))}<b>${h.temp ?? '-'}°</b><span class="sky">${esc(h.precip && h.precip !== '없음' ? h.precip : h.sky ?? '')}</span><span class="pop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5s-6 6.6-6 10.8a6 6 0 0 0 12 0C18 10.1 12 3.5 12 3.5z"/></svg>${h.pop ?? 0}%</span></div>`).join('');
+  const cols = hours.map((h, i) => `<div class="wx-hour${i === 0 ? ' now' : ''}"><span class="t">${esc(h.time)}</span>${wxSvg(wxKind(h))}<b>${h.temp ?? '-'}°</b><span class="sky">${esc(h.precip && h.precip !== '없음' ? h.precip : h.sky ?? '')}</span><span class="pop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5s-6 6.6-6 10.8a6 6 0 0 0 12 0C18 10.1 12 3.5 12 3.5z"/></svg>${h.pop == null ? '미제공' : esc(h.pop) + '%'}</span></div>`).join('');
   if (!chips && !tips && !cols) return '';
-  return `<section class="wx-card" aria-label="오늘의 걷기 날씨"><h3>오늘의 걷기 날씨</h3>${chips || tips ? `<div class="wx-status">${chips}${tips ? `<ul class="wx-tips">${tips}</ul>` : ''}</div>` : ''}${cols ? `<div class="wx-hours" style="--n:${hours.length}">${cols}</div>` : ''}</section>`;
+  return `<section class="wx-card" aria-label="산책 예정일의 날씨"><h3>산책 예정일의 날씨</h3>${chips || tips ? `<div class="wx-status">${chips}${tips ? `<ul class="wx-tips">${tips}</ul>` : ''}</div>` : ''}${cols ? `<div class="wx-hours" style="--n:${hours.length}">${cols}</div>` : ''}</section>`;
 }
 
 function renderPlan({ id, plan: p, voice, script = null }) {
@@ -142,7 +142,7 @@ function renderPlan({ id, plan: p, voice, script = null }) {
     ${weatherCard(w, hours)}
     <div class="audio" id="audioBox"><h3>🎧 2분 오디오 워킹</h3><p class="muted">날씨·코스·책을 엮은 대본을 AI가 쓰고 음성으로 읽어 드려요. 걷기 직전에 들어 보세요.</p><button class="primary" type="button" id="btnScript">오디오 워킹 만들기</button></div>
     <div class="sec"><h3>📚 오늘의 책 <small>${esc(p.situation.emoji)} ${esc(p.situation.label)} · 예스24 베스트</small></h3>${p.books.map(b => bookHtml(b, p.situation.id)).join('') || '<p class="empty">책을 불러오지 못했어요</p>'}</div>
-    <div class="sec"><h3>🚶 걷기 코스 <small>두루누비 · 출발지 반경 ${p.courseSearch?.radiusKm ?? '-'}km</small></h3>${courses.map((c, i) => courseHtml(c, i, detailButton(c, '걷기 코스 시작점', c.start ?? null))).join('') || '<p class="empty">가까운 코리아둘레길 코스가 없어요</p>'}</div>
+    <div class="sec"><h3>🚶 걷기 코스 <small>두루누비 · 출발지 반경 ${p.courseSearch?.radiusKm ?? '-'}km</small></h3>${courses.map((c, i) => courseHtml(c, i, detailButton(c, '걷기 코스 시작점', c.start ?? null))).join('') || (p.courseSearch?.withheld ? '<p class="empty">날씨 또는 해안 안전 기준에 따라 야외 코스를 추천하지 않아요.</p>' : '<p class="empty">가까운 코리아둘레길 코스가 없어요</p>')}</div>
     ${nearbyList((p.nearby.parks ?? []).filter(x => !/화장실|주차장|매점|관리사무소/.test(x.name + x.category)), '🌳 동네 산책', '출발지 3km 안 공원')}
     ${nearbyList(p.indoor, '☔ 실내에서 읽기', '도서관·북카페')}
     ${nearbyList(p.nearby.bookstores, '🏬 코스 근처 서점', '카카오 로컬')}
