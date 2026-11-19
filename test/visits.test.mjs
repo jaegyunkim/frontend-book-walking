@@ -69,7 +69,7 @@ const v = () => ({ today: '2026-11-19', firstDay: '2026-11-15', policy: { rawDay
   yearly: [{ year: 2026, start: '2026-01-01', end: '2026-11-19', ongoing: true, days: 5, yearDays: 365, main: 58, register: 3, avgMain: 11.6, avgRegister: 0.6, prev: { days: 0 }, changeMain: null, changeRegister: null }] });
 const spell = h => { for (const m of h.matchAll(/([가-힣])예요/g)) assert.equal((m[1].charCodeAt(0) - 0xac00) % 28, 0, m[0]); for (const m of h.matchAll(/([가-힣])이에요/g)) assert.notEqual((m[1].charCodeAt(0) - 0xac00) % 28, 0, m[0]); };
 test('대시보드: 시간별·요일별·주간별·일간·월간·시즌별·연간 탭, 핵심 수치는 해요체·사람 수', () => {
-  assert.deepEqual(SECTIONS.map(s => s[1]), ['시간별', '일간', '요일별', '주간별', '월간', '시즌별', '연간']);
+  assert.deepEqual(SECTIONS.map(s => s[1]), ['시간별', '일간', '요일별', '주간별', '월간', '시즌별', '연간', '지역', '기기']);
   const h = visitsHtml(v(), 30, 360, { sec: 'seasons' });
   assert.match(h, /<h2>접속현황<\/h2>/); assert.match(h, /오늘 방문자/); assert.match(h, /어제 같은 시간\(0~14시\)보다 <span class="vz-dl">메인 <span class="vz-chg up">3명 늘었어요/);
   assert.match(h, /관리자·내부 테스터 1명은 빼고 셌어요/); assert.match(h, /신청 화면 이동률\(30일\)/); assert.match(h, /10%/);
@@ -81,4 +81,14 @@ test('대시보드: 시간별·요일별·주간별·일간·월간·시즌별·
   assert.match(h, /2일 뒤 지워요/); assert.doesNotMatch(h, /ip_hash|undefined|NaN|\d+\.\d+\.\d+\.\d+/);
   assert.doesNotMatch(h.replace(/<[^>]+>/g, ''), /[가-힣](습니다|십시오|됩니다|합니다|입니다)(?![가-힣])/);
   spell(h);
+});
+test('지역·기기 탭: 많은 순 가로 막대(메인·신청), 비율, 집계 시작일 안내, 데이터 없으면 안내', () => {
+  const dims = { from: '2026-10-21', to: '2026-11-19', since: '2026-11-19',
+    region: { list: [{ value: '부산', main: 5, register: 1 }, { value: '경남', main: 3, register: 1 }], main: 8, register: 2 },
+    device: { list: [{ value: '아이폰', main: 6, register: 2 }], main: 6, register: 2 }, os: { list: [], main: 0, register: 0 }, browser: { list: [{ value: 'Safari', main: 6, register: 2 }], main: 6, register: 2 } };
+  const h = visitsHtml({ ...v(), dims }, 30, 360, { sec: 'region' });
+  assert.match(h, /id="vz-region" data-vsec-pane="region"/); assert.doesNotMatch(h.match(/<section[^>]*id="vz-region"[^>]*>/)[0], /hidden/);
+  assert.match(h, /<li><span class="vz-dl2">부산<\/span>[\s\S]*?<b>6<\/b><span class="sub">60%<\/span>/);
+  assert.match(h, /지역·기기 기록은 2026\.11\.19부터예요/); assert.match(h, /운영체제[\s\S]*아직 기록이 없어요/);
+  assert.match(visitsHtml(v(), 30, 360, { sec: 'device' }), /백엔드를 v0\.1\.21 이상으로/); // 옛 서버(dims 없음)
 });

@@ -17,7 +17,7 @@ const range = (a, b) => a === b ? dayLabel(a) : `${dayLabel(a)}~${dayLabel(b)}`;
 export const C = { main: '#2F6B4F', register: '#3B82C4' };
 const SERIES = [{ key: 'main', name: '메인(로그인)', color: C.main }, { key: 'register', name: '이용 신청', color: C.register }];
 /** 섹션 목록(탭 순서) */
-export const SECTIONS = [['hourly', '시간별'], ['daily', '일간'], ['weekday', '요일별'], ['weekly', '주간별'], ['monthly', '월간'], ['seasons', '시즌별'], ['yearly', '연간']];
+export const SECTIONS = [['hourly', '시간별'], ['daily', '일간'], ['weekday', '요일별'], ['weekly', '주간별'], ['monthly', '월간'], ['seasons', '시즌별'], ['yearly', '연간'], ['region', '지역'], ['device', '기기']];
 
 /** 증감 표시: ▲ 12.5% / ▼ 3% / 같아요 / 비교 불가 문구 */
 export function changeText(v, none = '비교할 데이터가 아직 없어요') {
@@ -230,12 +230,36 @@ function yearlySec(v, ui, cw) {
     ${m.panes}${readout('막대를 누르면 그해 수치를 보여 드려요.')}${table(PHEAD('전년 같은 기간'), periodRows(P, '전년 같은 기간'), true)}`);
 }
 
+// ---------- 지역·기기(기간 버튼 적용, 외부 방문자) ----------
+const share = (n, total) => total ? `${Math.round(n / total * 1000) / 10}%` : '-';
+function dimBars(d, title) {
+  if (!d?.list?.length) return `<h4 class="vz-dh">${title}</h4><p class="sub vz-note">아직 기록이 없어요.</p>`;
+  const max = Math.max(...d.list.map(x => x.main + x.register), 1), tot = d.main + d.register;
+  return `<h4 class="vz-dh">${title} <span class="sub">${num(tot)}명</span></h4><ul class="vz-dims">${d.list.map(x => {
+    const t = x.main + x.register;
+    return `<li><span class="vz-dl2">${esc(x.value)}${x.others ? ` <span class="sub">(${num(x.others)}곳)</span>` : ''}</span><span class="vz-dbar" aria-hidden="true"><i style="width:${x.main / max * 100}%;background:${C.main}"></i><i style="width:${x.register / max * 100}%;background:${C.register}"></i></span><span class="vz-dn"><b>${num(t)}</b><span class="sub">${share(t, tot)}</span></span></li>`;
+  }).join('')}</ul>${table(['항목', '#메인', '#신청', '#합계', '#비율'], d.list.map(x => `<tr>${td(esc(x.value))}${td(num(x.main), 'num')}${td(num(x.register), 'num')}${td(num(x.main + x.register), 'num')}${td(share(x.main + x.register, tot), 'num')}</tr>`))}`;
+}
+function dimNote(v) {
+  const s = v.dims?.since;
+  return `<p class="sub vz-note">${esc(dot(v.dims.from))}~${esc(dot(v.dims.to))} · 관리자·내부 방문 제외.${s ? ` 지역·기기 기록은 ${esc(dot(s))}부터예요(그 전 방문은 '알 수 없음').` : ''}</p>`;
+}
+const legacyDims = '<p class="sub vz-note">서버가 아직 지역·기기 집계를 보내지 않아요. 백엔드를 v0.1.21 이상으로 올리면 보여요.</p>';
+function regionSec(v, ui) {
+  if (!v.dims) return card('region', ui, '지역별 방문자', '', legacyDims);
+  return card('region', ui, '지역별 방문자', 'IP로 추정한 시·도 · 통신망에 따라 실제 위치와 다를 수 있어요', `${legend()}${dimNote(v)}${dimBars(v.dims.region, '시·도')}`);
+}
+function deviceSec(v, ui) {
+  if (!v.dims) return card('device', ui, '기기별 방문자', '', legacyDims);
+  return card('device', ui, '기기별 방문자', '브라우저 정보(User-Agent)로 추정', `${legend()}${dimNote(v)}${dimBars(v.dims.device, '기기')}${dimBars(v.dims.os, '운영체제')}${dimBars(v.dims.browser, '브라우저')}`);
+}
+
 /** 화면 전체 HTML. v=GET /v1/admin/visits 의 visits, days=일간 기간, width=차트 폭(px), ui={sec, modes:{섹션: 보기}} */
 export function visitsHtml(v, days = 30, width = 360, ui = {}) {
   const k = v.kpi, cw = Math.round(Math.max(300, Math.min(900, width))), sec = SECTIONS.some(([s]) => s === ui.sec) ? ui.sec : 'daily', u = { ...ui, sec, modes: ui.modes ?? {} };
   const started = v.firstDay ? `${dot(v.firstDay)}부터 집계했어요` : '아직 집계된 방문이 없어요';
   const head = `<div class="tool vz-head"><h2>접속현황</h2><div class="acts">${[14, 30, 90].map(d => `<button data-vdays="${d}" class="${d === days ? 'on' : ''}" aria-pressed="${d === days}">${d}일</button>`).join('')}<button id="vRefresh">새로 고침</button></div>
-    <p class="sub">메인(로그인) 화면과 이용 신청 화면을 연 방문자 수예요. 같은 IP는 하루에 화면마다 1명으로 세요. ${esc(started)}. 기간 버튼은 시간별·일간에 적용돼요.</p></div>`;
+    <p class="sub">메인(로그인) 화면과 이용 신청 화면을 연 방문자 수예요. 같은 IP는 하루에 화면마다 1명으로 세요. ${esc(started)}. 기간 버튼은 시간별·일간·지역·기기에 적용돼요.</p></div>`;
   const st = k.today.sameTimeYesterday, c7 = k.last7.comparable ?? (k.last7.changeMain != null || k.last7.changeRegister != null), mc = k.month.compare;
   const todaySub = st ? `어제 같은 시간(0~${st.upToHour}시)보다 ${delta2(k.today.main, st.main, k.today.register, st.register)}` : '한국 시간 0시부터 지금까지예요';
   const cards = `<div class="vz-kpis">
@@ -245,7 +269,7 @@ export function visitsHtml(v, days = 30, width = 360, ui = {}) {
     <div class="vz-kpi"><span class="vz-kt">신청 화면 이동률(30일)</span><div class="vz-kv"><b class="vz-big">${pct(k.funnel30.rate)}</b></div><div class="vz-ks">메인 방문자 ${num(k.funnel30.main)}명 중 같은 날 신청 화면도 연 분 ${num(k.funnel30.both)}명 · 신청 화면으로 바로 온 분 ${num(k.funnel30.directRegister)}명</div></div>
   </div>`;
   const tabs = `<div class="vz-tabs" role="tablist" aria-label="접속현황 기간 단위">${SECTIONS.map(([s, name]) => `<button type="button" role="tab" id="vzt-${s}" data-vsec="${s}" aria-controls="vz-${s}" aria-selected="${s === sec}"${s === sec ? ' class="on"' : ''}>${name}</button>`).join('')}</div>`;
-  const body = [hourlySec(v, u, cw), dailySec(v, u, cw, days), weekdaySec(v, u, cw), weeklySec(v, u, cw), monthlySec(v, u, cw), seasonSec(v, u, cw), yearlySec(v, u, cw)].join('');
+  const body = [hourlySec(v, u, cw), dailySec(v, u, cw, days), weekdaySec(v, u, cw), weeklySec(v, u, cw), monthlySec(v, u, cw), seasonSec(v, u, cw), yearlySec(v, u, cw), regionSec(v, u), deviceSec(v, u)].join('');
   const foot = `<details class="card vz-foot"><summary><h3>집계 기준</h3></summary><ul class="sk-ul">
     <li>방문자는 하루(한국 시간 0시~24시) 동안 같은 IP에서 같은 화면을 여러 번 열어도 1명으로 세요. 같은 와이파이·통신사 IP를 함께 쓰는 여러 분은 1명으로 셀 수 있어요.</li>
     <li>시간별은 그날 처음 연 시각에 1명으로 세요. 그래서 시간별을 모두 더하면 그날 방문자 수와 같아요.</li>
@@ -255,6 +279,7 @@ export function visitsHtml(v, days = 30, width = 360, ui = {}) {
     <li>진행 중인 기간은 오늘까지, 수집을 시작하기 전 날은 0명이 아니라 '집계 전'으로 보여 드리고 하루 평균에서도 빼요.</li>
     <li>최근 30일 조회 수(새로 고침 포함)는 메인 ${num(k.last30.hitsMain)}회, 신청 ${num(k.last30.hitsRegister)}회예요.</li>
     <li>오늘 카드는 하루가 다 지나지 않았으니 어제 하루 전체가 아니라 어제 같은 시간까지와 견줘요.</li>
+    <li>지역은 그날 처음 온 방문자의 IP로 시·도만 추정해 남기고(IP·좌표는 저장 안 함), 기기·운영체제·브라우저는 브라우저가 알려 주는 정보로 추정해요.</li>
     <li>IP는 저장하지 않아요. 같은 사람인지 가리는 데만 날마다 바뀌는 비밀값으로 만든 해시를 쓰고, 그 해시도 ${num(v.policy.rawDays)}일 뒤 지워요. 날짜·시간별 숫자만 ${num(v.policy.dailyYears)}년 보관해요.</li></ul></details>`;
   return head + cards + tabs + body + foot;
 }

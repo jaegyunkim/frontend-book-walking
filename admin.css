@@ -301,3 +301,12 @@ body { word-break: keep-all; overflow-wrap: anywhere; }
 }
 @media (max-width: 360px) { .vz-kpis, .vz-sum { grid-template-columns: 1fr; } }
 .vz-dl { display: block; } .vz-pc { white-space: nowrap; margin-left: 2px; }
+/* 접속현황 지역·기기 v0.4.16 — 가로 막대(메인 초록 + 신청 하늘색), 숫자·비율 오른쪽 */
+.vz-dh { margin: 16px 0 8px; font-size: 15px; font-weight: 800; color: var(--ink); } .vz-dh .sub { font-weight: 600; margin-left: 4px; }
+.vz-dims { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.vz-dims li { display: grid; grid-template-columns: minmax(84px, 30%) 1fr auto; align-items: center; gap: 10px; font-size: 14px; }
+.vz-dl2 { color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vz-dbar { display: flex; height: 14px; border-radius: 7px; background: var(--panel2); overflow: hidden; }
+.vz-dbar i { display: block; height: 100%; }
+.vz-dn { display: flex; flex-direction: column; align-items: flex-end; min-width: 52px; line-height: 1.2; } .vz-dn b { font-variant-numeric: tabular-nums; } .vz-dn .sub { font-size: 11.5px; }
+@media (max-width:720px) { .vz-tabs button { flex: 1 0 calc(20% - 6px); padding: 6px 2px; font-size: 12.5px; } } /* 탭 9개: 5+4 줄 */

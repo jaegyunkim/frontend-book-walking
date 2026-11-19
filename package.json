@@ -1,1 +1,1 @@
-{ "name": "frontend-book-walking", "version": "0.4.15", "private": true, "type": "module", "scripts": { "test": "node --test test/*.test.mjs", "dev": "python3 -m http.server 8181" } }
+{ "name": "frontend-book-walking", "version": "0.4.16", "private": true, "type": "module", "scripts": { "test": "node --test test/*.test.mjs", "dev": "python3 -m http.server 8181" } }
