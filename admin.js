@@ -1,8 +1,8 @@
-import { ROLE_LABEL, policyText, DAY_NOTE } from './role-policy.js?v=0.4.16';
+import { ROLE_LABEL, policyText, DAY_NOTE } from './role-policy.js?v=0.4.17';
 import { approvalMailto } from './approval-email.js?v=0.1.7';
-import { visitsHtml } from './admin-visits.js?v=0.4.16';
+import { visitsHtml } from './admin-visits.js?v=0.4.17';
 // 북 워킹 관리자 화면(backend-go-fishing/frontend-go-fishing 운영관리와 동일 구성 + 플랜·코스 탭): 계정·세션·사용량·대화 로그·로그인/작업 기록. 관리자 계정으로 로그인한 탭에서만 동작.
-import { state, api, health, startTimer, syncAccount, setOnAuthLost, logout } from './auth.js?v=0.4.16';
+import { state, api, health, startTimer, syncAccount, setOnAuthLost, logout } from './auth.js?v=0.4.17';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const dt = v => v ? new Date(v).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
@@ -197,7 +197,7 @@ const views = {
   },
   // 접속현황: 메인(로그인)·이용 신청 화면 방문자(하루 IP 1회) — 시간별·일간·요일별·주간별·월간·시즌별·연간(섹션 탭)
   async visits(opt = {}) {
-    const days = [14, 30, 90].includes(opt.days) ? opt.days : 30;
+    const days = [7, 14, 30, 90].includes(opt.days) ? opt.days : 30;
     const { visits } = await api(`/v1/admin/visits?days=${days}`);
     const draw = () => {
       view.innerHTML = visitsHtml(visits, days, view.clientWidth - 56, visitsUi);

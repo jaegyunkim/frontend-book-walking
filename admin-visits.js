@@ -17,7 +17,7 @@ const range = (a, b) => a === b ? dayLabel(a) : `${dayLabel(a)}~${dayLabel(b)}`;
 export const C = { main: '#2F6B4F', register: '#3B82C4' };
 const SERIES = [{ key: 'main', name: '메인(로그인)', color: C.main }, { key: 'register', name: '이용 신청', color: C.register }];
 /** 섹션 목록(탭 순서) */
-export const SECTIONS = [['hourly', '시간별'], ['daily', '일간'], ['weekday', '요일별'], ['weekly', '주간별'], ['monthly', '월간'], ['seasons', '시즌별'], ['yearly', '연간'], ['region', '지역'], ['device', '기기']];
+export const SECTIONS = [['hourly', '시간별'], ['daily', '일간'], ['weekday', '요일별'], ['weekly', '주간별'], ['monthly', '월간'], ['seasons', '시즌별'], ['yearly', '연간'], ['devices', '기기·지역']];
 
 /** 증감 표시: ▲ 12.5% / ▼ 3% / 같아요 / 비교 불가 문구 */
 export function changeText(v, none = '비교할 데이터가 아직 없어요') {
@@ -230,36 +230,40 @@ function yearlySec(v, ui, cw) {
     ${m.panes}${readout('막대를 누르면 그해 수치를 보여 드려요.')}${table(PHEAD('전년 같은 기간'), periodRows(P, '전년 같은 기간'), true)}`);
 }
 
-// ---------- 지역·기기(기간 버튼 적용, 외부 방문자) ----------
-const share = (n, total) => total ? `${Math.round(n / total * 1000) / 10}%` : '-';
-function dimBars(d, title) {
-  if (!d?.list?.length) return `<h4 class="vz-dh">${title}</h4><p class="sub vz-note">아직 기록이 없어요.</p>`;
-  const max = Math.max(...d.list.map(x => x.main + x.register), 1), tot = d.main + d.register;
-  return `<h4 class="vz-dh">${title} <span class="sub">${num(tot)}명</span></h4><ul class="vz-dims">${d.list.map(x => {
-    const t = x.main + x.register;
-    return `<li><span class="vz-dl2">${esc(x.value)}${x.others ? ` <span class="sub">(${num(x.others)}곳)</span>` : ''}</span><span class="vz-dbar" aria-hidden="true"><i style="width:${x.main / max * 100}%;background:${C.main}"></i><i style="width:${x.register / max * 100}%;background:${C.register}"></i></span><span class="vz-dn"><b>${num(t)}</b><span class="sub">${share(t, tot)}</span></span></li>`;
-  }).join('')}</ul>${table(['항목', '#메인', '#신청', '#합계', '#비율'], d.list.map(x => `<tr>${td(esc(x.value))}${td(num(x.main), 'num')}${td(num(x.register), 'num')}${td(num(x.main + x.register), 'num')}${td(share(x.main + x.register, tot), 'num')}</tr>`))}`;
+// ---------- 기기·지역(frontend-go-fishing 과 같은 화면): 최근 N일(오늘 포함) 외부 방문자를 항목별 막대·비율로(메인·신청 따로) ----------
+/** 서버 dims 목록 → [{key, main, register, total}] ('알 수 없음'은 맨 뒤). family=true 면 운영체제를 버전 없이(iOS·Android·Windows·macOS) 묶는다 */
+export function groupDims(list, family = false) {
+  const m = new Map();
+  for (const x of list ?? []) { const k = (family ? String(x.value).split(' ')[0] : x.value) || '알 수 없음'; const g = m.get(k) ?? { key: k, main: 0, register: 0 }; g.main += Number(x.main) || 0; g.register += Number(x.register) || 0; m.set(k, g); }
+  return [...m.values()].map(g => ({ ...g, total: g.main + g.register })).sort((a, b) => (a.key === '알 수 없음') - (b.key === '알 수 없음') || b.total - a.total);
 }
-function dimNote(v) {
-  const s = v.dims?.since;
-  return `<p class="sub vz-note">${esc(dot(v.dims.from))}~${esc(dot(v.dims.to))} · 관리자·내부 방문 제외.${s ? ` 지역·기기 기록은 ${esc(dot(s))}부터예요(그 전 방문은 '알 수 없음').` : ''}</p>`;
+function segList(title, list, tot) {
+  if (!list.length) return '';
+  return `<div class="vz-seglist"><h4>${title}</h4>${list.map(g => `<div class="vz-segrow"><div class="vz-segk"><b>${esc(g.key)}</b><span class="sub">${num(g.total)}명 · ${pct(tot ? g.total / tot : null)}</span></div>
+    <div class="vz-segbar" aria-hidden="true">${SERIES.map(x => `<i style="width:${tot ? (g[x.key] / tot * 100).toFixed(1) : 0}%;background:${x.color}"></i>`).join('')}</div>
+    <div class="vz-segv sub">메인 ${num(g.main)} · 신청 ${num(g.register)}</div></div>`).join('')}</div>`;
 }
-const legacyDims = '<p class="sub vz-note">서버가 아직 지역·기기 집계를 보내지 않아요. 백엔드를 v0.1.21 이상으로 올리면 보여요.</p>';
-function regionSec(v, ui) {
-  if (!v.dims) return card('region', ui, '지역별 방문자', '', legacyDims);
-  return card('region', ui, '지역별 방문자', 'IP로 추정한 시·도 · 통신망에 따라 실제 위치와 다를 수 있어요', `${legend()}${dimNote(v)}${dimBars(v.dims.region, '시·도')}`);
-}
-function deviceSec(v, ui) {
-  if (!v.dims) return card('device', ui, '기기별 방문자', '', legacyDims);
-  return card('device', ui, '기기별 방문자', '브라우저 정보(User-Agent)로 추정', `${legend()}${dimNote(v)}${dimBars(v.dims.device, '기기')}${dimBars(v.dims.os, '운영체제')}${dimBars(v.dims.browser, '브라우저')}`);
+function devicesSec(v, ui) {
+  const d = v.dims;
+  if (!d) return card('devices', ui, '기기·지역', '', '<p class="sub vz-note">서버가 아직 이 지표를 보내지 않아요. 백엔드를 v0.1.21 이상으로 올리면 보여요.</p>');
+  const tot = (d.device?.main ?? 0) + (d.device?.register ?? 0);
+  const platforms = groupDims(d.device?.list), unknown = platforms.find(g => g.key === '알 수 없음')?.total ?? 0;
+  const regions = groupDims(d.region?.list), noRegion = regions.every(g => g.key === '알 수 없음');
+  const body = !tot ? '<p class="sub vz-note">이 기간에는 방문자가 없어요.</p>' : `${legend()}
+    ${unknown ? `<p class="sub vz-note">기기 기록은 ${esc(dot(d.since ?? '2026-11-19'))}부터 시작했어요. 그전 방문 ${num(unknown)}명은 '알 수 없음'으로 보여요.</p>` : ''}
+    ${segList('기기', platforms, tot)}
+    ${segList('운영체제', groupDims(d.os?.list, true), tot)}
+    ${segList('브라우저', groupDims(d.browser?.list), tot)}
+    ${noRegion ? '<div class="vz-seglist"><h4>지역</h4><p class="sub vz-note">아직 시·도를 알아낸 방문이 없어요.</p></div>' : segList('지역(시·도)', regions, tot)}`;
+  return card('devices', ui, '기기·지역', `${esc(range(d.from, d.to))} · 외부 방문자 ${num(tot)}명`, body);
 }
 
 /** 화면 전체 HTML. v=GET /v1/admin/visits 의 visits, days=일간 기간, width=차트 폭(px), ui={sec, modes:{섹션: 보기}} */
 export function visitsHtml(v, days = 30, width = 360, ui = {}) {
   const k = v.kpi, cw = Math.round(Math.max(300, Math.min(900, width))), sec = SECTIONS.some(([s]) => s === ui.sec) ? ui.sec : 'daily', u = { ...ui, sec, modes: ui.modes ?? {} };
   const started = v.firstDay ? `${dot(v.firstDay)}부터 집계했어요` : '아직 집계된 방문이 없어요';
-  const head = `<div class="tool vz-head"><h2>접속현황</h2><div class="acts">${[14, 30, 90].map(d => `<button data-vdays="${d}" class="${d === days ? 'on' : ''}" aria-pressed="${d === days}">${d}일</button>`).join('')}<button id="vRefresh">새로 고침</button></div>
-    <p class="sub">메인(로그인) 화면과 이용 신청 화면을 연 방문자 수예요. 같은 IP는 하루에 화면마다 1명으로 세요. ${esc(started)}. 기간 버튼은 시간별·일간·지역·기기에 적용돼요.</p></div>`;
+  const head = `<div class="tool vz-head"><h2>접속현황</h2><div class="acts">${[7, 14, 30, 90].map(d => `<button data-vdays="${d}" class="${d === days ? 'on' : ''}" aria-pressed="${d === days}">${d}일</button>`).join('')}<button id="vRefresh">새로 고침</button></div>
+    <p class="sub">메인(로그인) 화면과 이용 신청 화면을 연 방문자 수예요. 같은 IP는 하루에 화면마다 1명으로 세요. ${esc(started)}. 기간 버튼은 시간별·일간·기기·지역에 적용돼요.</p></div>`;
   const st = k.today.sameTimeYesterday, c7 = k.last7.comparable ?? (k.last7.changeMain != null || k.last7.changeRegister != null), mc = k.month.compare;
   const todaySub = st ? `어제 같은 시간(0~${st.upToHour}시)보다 ${delta2(k.today.main, st.main, k.today.register, st.register)}` : '한국 시간 0시부터 지금까지예요';
   const cards = `<div class="vz-kpis">
@@ -269,7 +273,7 @@ export function visitsHtml(v, days = 30, width = 360, ui = {}) {
     <div class="vz-kpi"><span class="vz-kt">신청 화면 이동률(30일)</span><div class="vz-kv"><b class="vz-big">${pct(k.funnel30.rate)}</b></div><div class="vz-ks">메인 방문자 ${num(k.funnel30.main)}명 중 같은 날 신청 화면도 연 분 ${num(k.funnel30.both)}명 · 신청 화면으로 바로 온 분 ${num(k.funnel30.directRegister)}명</div></div>
   </div>`;
   const tabs = `<div class="vz-tabs" role="tablist" aria-label="접속현황 기간 단위">${SECTIONS.map(([s, name]) => `<button type="button" role="tab" id="vzt-${s}" data-vsec="${s}" aria-controls="vz-${s}" aria-selected="${s === sec}"${s === sec ? ' class="on"' : ''}>${name}</button>`).join('')}</div>`;
-  const body = [hourlySec(v, u, cw), dailySec(v, u, cw, days), weekdaySec(v, u, cw), weeklySec(v, u, cw), monthlySec(v, u, cw), seasonSec(v, u, cw), yearlySec(v, u, cw), regionSec(v, u), deviceSec(v, u)].join('');
+  const body = [hourlySec(v, u, cw), dailySec(v, u, cw, days), weekdaySec(v, u, cw), weeklySec(v, u, cw), monthlySec(v, u, cw), seasonSec(v, u, cw), yearlySec(v, u, cw), devicesSec(v, u)].join('');
   const foot = `<details class="card vz-foot"><summary><h3>집계 기준</h3></summary><ul class="sk-ul">
     <li>방문자는 하루(한국 시간 0시~24시) 동안 같은 IP에서 같은 화면을 여러 번 열어도 1명으로 세요. 같은 와이파이·통신사 IP를 함께 쓰는 여러 분은 1명으로 셀 수 있어요.</li>
     <li>시간별은 그날 처음 연 시각에 1명으로 세요. 그래서 시간별을 모두 더하면 그날 방문자 수와 같아요.</li>
