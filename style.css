@@ -555,3 +555,14 @@ body { word-break: keep-all; overflow-wrap: anywhere; } /* 한국어는 낱말 �
 .bubble.error .bubble-ico { background: var(--bad); }
 .toast { border-radius: var(--r-sm); padding: 12px 16px; background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 8px 24px rgba(31,42,36,.22); border-left: 5px solid var(--accent); max-width: min(92%, 420px); }
 .brand { text-decoration: none; color: inherit; border-radius: var(--r-sm); -webkit-tap-highlight-color: transparent; } .brand:active { opacity: .7; } .brand:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+/* 비밀번호 보기 v0.4.15 — [입력][ⓧ 지우기][👁 보기]: 보기는 맨 오른쪽 고정, 지우기는 글자가 있을 때만 그 왼쪽 */
+.clearable.has-eye input { padding-right: 88px; }
+.clearable.has-eye .clear-btn { right: 46px; }
+.eye-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--mute); cursor: pointer; min-height: 0; padding: 0; }
+.eye-btn svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.eye-btn .eye-off, .eye-btn[aria-pressed="true"] .eye-on { display: none; }
+.eye-btn[aria-pressed="true"] .eye-off { display: block; }
+.eye-btn[aria-pressed="true"] { color: var(--accent); }
+@media (hover: hover) { .eye-btn:hover { color: var(--accent); background: var(--accent-soft); } } /* 터치 화면은 누른 뒤 배경이 남지 않게 */
+.eye-btn:focus-visible { color: var(--accent); background: var(--accent-soft); }
+.eye-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

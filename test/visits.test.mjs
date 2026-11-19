@@ -1,7 +1,8 @@
-// 접속현황(v0.4.14): visit.js(메인·신청 화면만 방문 알림) + admin-visits.js(대시보드 HTML·SVG 차트) + 관리자 탭
+// 접속현황(v0.4.14~): visit.js(메인·신청 화면만 방문 알림) + admin-visits.js(대시보드 HTML·SVG 차트) + 관리자 탭
 import fs from 'node:fs'; import vm from 'node:vm'; import assert from 'node:assert/strict'; import test from 'node:test';
 import { visitsHtml, lineChart, barChart, niceScale, changeText, delta, num, pct, SECTIONS, C } from '../admin-visits.js';
 const read = f => fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+const V = JSON.parse(read('package.json')).version, VE = V.replace(/\./g, '\\.'); // 버전은 package.json 기준(올릴 때마다 테스트를 고치지 않게)
 
 // visit.js: auth.js 를 빼고 실행(가짜 api·document)
 function loadVisit(api, { pathname = '/frontend-book-walking/', prerendering = false } = {}) {
@@ -20,15 +21,15 @@ test('방문 알림: 화면 구분·한 번 전송·실패해도 조용히·미�
   assert.equal(later.length, 0); p.listeners.prerenderingchange(); assert.deepEqual(later, ['main']);
 });
 test('visit.js 는 index.html·register.html 에만(관리자 화면은 세지 않음), 모듈(지연 실행)로 같은 버전', () => {
-  for (const f of ['index.html', 'register.html']) assert.match(read(f), /<script src="visit\.js\?v=0\.4\.14" type="module"><\/script>/, f);
+  for (const f of ['index.html', 'register.html']) assert.match(read(f), new RegExp(`<script src="visit\\.js\\?v=${VE}" type="module"><\\/script>`), f);
   for (const f of ['admin.html', 'admin.js', 'app.js', 'register.js']) assert.doesNotMatch(read(f), /visit\.js/, f);
-  assert.match(read('visit.js'), /from '\.\/auth\.js\?v=0\.4\.14'/); assert.match(read('visit.js'), /timeoutMs: 5000/);
+  assert.match(read('visit.js'), new RegExp(`from '\\./auth\\.js\\?v=${VE}'`)); assert.match(read('visit.js'), /timeoutMs: 5000/);
 });
 test('관리자 화면에 접속현황 탭·화면·버전', () => {
   assert.match(read('admin.html'), /<button data-v="visits">접속현황<\/button>/);
-  const a = read('admin.js'); assert.match(a, /import \{ visitsHtml \} from '\.\/admin-visits\.js\?v=0\.4\.14'/); assert.match(a, /async visits\(opt = \{\}\) \{/); assert.match(a, /api\(`\/v1\/admin\/visits\?days=\$\{days\}`\)/);
-  for (const f of ['index.html', 'admin.html', 'register.html', 'app.js', 'admin.js', 'register.js', 'package.json']) { assert.match(read(f), /0\.4\.14/, f); assert.doesNotMatch(read(f), /0\.4\.13/, f); }
-  assert.match(read('sw.js'), /'bookwalking-shell-v43'/);
+  const a = read('admin.js'); assert.match(a, new RegExp(`import \\{ visitsHtml \\} from '\\./admin-visits\\.js\\?v=${VE}'`)); assert.match(a, /async visits\(opt = \{\}\) \{/); assert.match(a, /api\(`\/v1\/admin\/visits\?days=\$\{days\}`\)/);
+  for (const f of ['index.html', 'admin.html', 'register.html', 'app.js', 'admin.js', 'register.js', 'package.json']) { assert.ok(read(f).includes(V), f); }
+  assert.match(read('sw.js'), /'bookwalking-shell-v\d+'/);
 });
 test('디자인: 메인 진초록·신청 하늘색, 외부 차트 라이브러리 없음', () => {
   assert.deepEqual(C, { main: '#2F6B4F', register: '#3B82C4' });
