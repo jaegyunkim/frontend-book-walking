@@ -307,3 +307,4 @@ body { word-break: keep-all; overflow-wrap: anywhere; }
 .vz-segk { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; } .vz-segk b { color: var(--ink); }
 .vz-segbar { display: flex; height: 8px; margin: 6px 0 4px; border-radius: 4px; background: var(--panel2); overflow: hidden; } .vz-segbar i { display: block; height: 100%; }
 .vz-segv { font-size: 12.5px; }
+@media (max-width:720px) { .vz-tabs button { flex: 1 0 calc(20% - 6px); padding: 6px 2px; font-size: 12.5px; } } /* 탭 9개(기기·지역 분리): 휴대폰에서 5+4 두 줄 */

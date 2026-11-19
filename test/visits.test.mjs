@@ -69,7 +69,7 @@ const v = () => ({ today: '2026-11-19', firstDay: '2026-11-15', policy: { rawDay
   yearly: [{ year: 2026, start: '2026-01-01', end: '2026-11-19', ongoing: true, days: 5, yearDays: 365, main: 58, register: 3, avgMain: 11.6, avgRegister: 0.6, prev: { days: 0 }, changeMain: null, changeRegister: null }] });
 const spell = h => { for (const m of h.matchAll(/([가-힣])예요/g)) assert.equal((m[1].charCodeAt(0) - 0xac00) % 28, 0, m[0]); for (const m of h.matchAll(/([가-힣])이에요/g)) assert.notEqual((m[1].charCodeAt(0) - 0xac00) % 28, 0, m[0]); };
 test('대시보드: 시간별·요일별·주간별·일간·월간·시즌별·연간 탭, 핵심 수치는 해요체·사람 수', () => {
-  assert.deepEqual(SECTIONS.map(s => s[1]), ['시간별', '일간', '요일별', '주간별', '월간', '시즌별', '연간', '기기·지역']);
+  assert.deepEqual(SECTIONS.map(s => s[1]), ['시간별', '일간', '요일별', '주간별', '월간', '시즌별', '연간', '기기', '지역']);
   const h = visitsHtml(v(), 30, 360, { sec: 'seasons' });
   assert.match(h, /<h2>접속현황<\/h2>/); assert.match(h, /오늘 방문자/); assert.match(h, /어제 같은 시간\(0~14시\)보다 <span class="vz-dl">메인 <span class="vz-chg up">3명 늘었어요/);
   assert.match(h, /관리자·내부 테스터 1명은 빼고 셌어요/); assert.match(h, /신청 화면 이동률\(30일\)/); assert.match(h, /10%/);
@@ -82,17 +82,17 @@ test('대시보드: 시간별·요일별·주간별·일간·월간·시즌별·
   assert.doesNotMatch(h.replace(/<[^>]+>/g, ''), /[가-힣](습니다|십시오|됩니다|합니다|입니다)(?![가-힣])/);
   spell(h);
 });
-test('기기·지역 섹션(go-fishing 과 같음): 기기·운영체제(버전 없이)·브라우저·지역 순, 명·비율·메인/신청, 7일 버튼', () => {
+test('기기·지역 탭 분리: 기기 탭(기기·운영체제·브라우저), 지역 탭(시·도), 명·비율·메인/신청, 7일 버튼', () => {
   const dims = { from: '2026-11-13', to: '2026-11-19', since: '2026-11-19',
     region: { list: [{ value: '부산', main: 5, register: 1 }, { value: '알 수 없음', main: 3, register: 1 }], main: 8, register: 2 },
     device: { list: [{ value: '아이폰', main: 6, register: 2 }, { value: '알 수 없음', main: 2, register: 0 }], main: 8, register: 2 },
     os: { list: [{ value: 'iOS 26', main: 4, register: 1 }, { value: 'iOS 18', main: 2, register: 1 }, { value: '알 수 없음', main: 2, register: 0 }], main: 8, register: 2 },
     browser: { list: [{ value: 'Safari', main: 8, register: 2 }], main: 8, register: 2 } };
   const h = visitsHtml({ ...v(), dims }, 7, 360, { sec: 'devices' });
-  assert.match(h, /data-vdays="7" class="on"/);
-  const sec = h.slice(h.indexOf('id="vz-devices"'));
-  assert.ok(sec.indexOf('<h4>기기</h4>') < sec.indexOf('<h4>운영체제</h4>') && sec.indexOf('<h4>운영체제</h4>') < sec.indexOf('<h4>브라우저</h4>') && sec.indexOf('<h4>브라우저</h4>') < sec.indexOf('<h4>지역(시·도)</h4>'));
-  assert.match(sec, /<b>iOS<\/b><span class="sub">8명 · 80%<\/span>/); // iOS 26 + iOS 18 → iOS
-  assert.match(sec, /메인 6 · 신청 2/); assert.match(sec, /그전 방문 2명은 '알 수 없음'/); assert.match(sec, /외부 방문자 10명/);
-  assert.match(visitsHtml(v(), 30, 360, { sec: 'devices' }), /백엔드를 v0\.1\.21 이상으로/);
+  assert.match(h, /data-vdays="7" class="on"/); assert.match(h, /data-vsec="devices"[^>]*>기기<\/button><button[^>]*data-vsec="regions"[^>]*>지역<\/button>/);
+  const dev = h.slice(h.indexOf('id="vz-devices"'), h.indexOf('id="vz-regions"')), reg = h.slice(h.indexOf('id="vz-regions"'));
+  assert.ok(dev.indexOf('<h4>기기</h4>') < dev.indexOf('<h4>운영체제</h4>') && dev.indexOf('<h4>운영체제</h4>') < dev.indexOf('<h4>브라우저</h4>')); assert.doesNotMatch(dev, /지역\(시·도\)/);
+  assert.match(dev, /<b>iOS<\/b><span class="sub">8명 · 80%<\/span>/); assert.match(dev, /메인 6 · 신청 2/); assert.match(dev, /그전 방문 2명은 '알 수 없음'/);
+  assert.match(reg, /<h4>지역\(시·도\)<\/h4>/); assert.match(reg, /<b>부산<\/b><span class="sub">6명 · 60%<\/span>/); assert.match(reg, /hidden/); // 기기 탭이 열려 있으면 지역은 숨김
+  assert.match(visitsHtml(v(), 30, 360, { sec: 'regions' }), /백엔드를 v0\.1\.21 이상으로/);
 });
