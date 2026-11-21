@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage } from './role-policy.js?v=0.4.18';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage, nextLoginText } from './role-policy.js?v=0.4.19';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes } from './auth.js?v=0.4.18';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes, loginQuota } from './auth.js?v=0.4.19';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -434,7 +434,9 @@ $('#opinionForm').onsubmit = async e => {
 };
 
 // ---------- 계정 설정·사용량·AI 잠금 ----------
-$('#loginPolicy').textContent = policyText('user') + '. ' + DAY_NOTE;
+// 로그인 이용 안내: 서버 기본 한도(/healthz)를 따르고, 없으면 화면에 둔 기본값
+const showLoginPolicy = () => { $('#loginPolicy').textContent = policyText('user', state.roleLimits?.user) + '. 계정마다 다를 수 있어요. ' + DAY_NOTE; };
+showLoginPolicy();
 let usage = null, aiLocked = false;
 async function refreshUsage() {
   const token = state.auth?.token;
@@ -520,11 +522,16 @@ async function showApp() {
   $('#btnAdmin').hidden = state.auth.user?.role !== 'admin';
   markActive();
   timer?.stop();
-  timer = startTimer($('#timer'), { onWarn: () => toast('1분 뒤 자동 로그아웃돼요. 필요한 내용은 지금 확인해 주세요.', 8000), onExpire: () => { const min = sessionMinutes(); endSession(`${min}분 이용 시간이 끝나 로그아웃했어요.`, 'expired'); showNotice('이용 시간이 끝났어요', `로그인 1회에 ${min}분 이용할 수 있어요.\n이용해 주셔서 감사합니다.`); } });
+  timer = startTimer($('#timer'), { onWarn: () => toast('1분 뒤 자동 로그아웃돼요. 필요한 내용은 지금 확인해 주세요.', 8000), onExpire: () => { const min = sessionMinutes(), lq = loginQuota(); endSession(`${min}분 이용 시간이 끝나 로그아웃했어요.`, 'expired'); showSessionEnd(min, lq); } });
   if (state.auth.user?.mustChangePassword) openPw(true);
   refreshUsage();
   loadPlaces().then(showDailyTip);
   recordLoginLocation();
+}
+// 이용 시간 만료 안내: 이 계정의 로그인 1회 시간과 남은 로그인 횟수(최근 24시간 기준)
+function showSessionEnd(min, lq) {
+  const more = !lq || lq.left > 0;
+  showNotice(more ? '이번 이용 시간이 끝났어요' : '오늘 이용 시간이 끝났어요', `이 계정은 로그인 1회에 ${min}분 이용할 수 있어요.\n${nextLoginText(lq)}\n이용해 주셔서 감사합니다.${more ? '' : ' 다음에 다시 찾아 주세요.'}`);
 }
 function openPw(forced = true) {
   $('#pwMsg').textContent = ''; $('#pwCur').value = ''; $('#pwNew').value = ''; $('#pwNew2').value = '';
@@ -559,14 +566,14 @@ $('#loginForm').onsubmit = async e => {
     $('#loginPw').value = ''; await showApp();
   } catch (err) {
     if (err.code === 'ACTIVE_SESSION') { $('#loginPw').value = ''; showNotice('다른 기기에서 이용 중이에요', err.message); }
-    else if (err.code === 'LOGIN_DAILY_LIMIT') showNotice('오늘 로그인 횟수를 모두 쓰셨어요', '다음 날 한국 시간 밤 12시부터 다시 로그인할 수 있어요.');
+    else if (err.code === 'LOGIN_DAILY_LIMIT') showNotice('로그인 횟수를 모두 쓰셨어요', err.nextLoginAt && err.loginLimit ? nextLoginText({ left: 0, limit: err.loginLimit, nextAt: err.nextLoginAt }) : err.message);
     else { $('#loginMsg').textContent = err.message; $('#loginMsg').dataset.kind = 'error'; }
   } finally { btn.disabled = false; }
 };
 // 로그아웃: 확인 창 먼저(확인 = 로그아웃, 취소 = 그대로)
 $('#btnLogout').onclick = () => {
   const d = $('#logoutDialog');
-  const update = () => { $('#logoutMsg').textContent = '이용해 주셔서 감사합니다.\n' + logoutUsage(usage?.today, usage?.limits); };
+  const update = () => { $('#logoutMsg').textContent = '이용해 주셔서 감사합니다.\n' + logoutUsage(loginQuota(), usage?.limits); };
   update();
   refreshUsage().then(() => { if (d.open) update(); });
   d.returnValue = 'cancel';
@@ -579,6 +586,7 @@ setOnMustChange(() => openPw(true));
 (async () => {
   const h = await health();
   if (h.error) return showLogin('서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.');
+  showLoginPolicy();
   if (state.authMode === 'off' || state.auth) return showApp();
   showLogin();
 })();

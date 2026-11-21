@@ -308,3 +308,6 @@ body { word-break: keep-all; overflow-wrap: anywhere; }
 .vz-segbar { display: flex; height: 8px; margin: 6px 0 4px; border-radius: 4px; background: var(--panel2); overflow: hidden; } .vz-segbar i { display: block; height: 100%; }
 .vz-segv { font-size: 12.5px; }
 @media (max-width:720px) { .vz-tabs button { flex: 1 0 calc(20% - 6px); padding: 6px 2px; font-size: 12.5px; } } /* 탭 9개(기기·지역 분리): 휴대폰에서 5+4 두 줄 */
+
+/* v0.4.19 한도 창: 입력값을 풀어 쓴 안내 */
+.settings .hint.limits-hint { color: var(--ink); font-size: 13px; font-weight: 600; background: var(--panel2); border-radius: 10px; padding: 8px 10px; line-height: 1.5; }

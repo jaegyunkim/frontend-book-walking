@@ -8,6 +8,7 @@ const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
 export const state = {
   api: localStorage.getItem('bookwalking.api') || window.BOOKWALKING_API || (isLocal ? 'http://localhost:8888' : ''),
   authMode: null,                 // 'required' | 'off' | null(서버 미연결)
+  roleLimits: null,               // 서버 /healthz 의 역할 기본 한도(로그인 전 안내용)
   auth: JSON.parse(sessionStorage.getItem(KEY) || 'null') // { token, expiresAtLocal, user }
 };
 // 외부 수집기가 없거나 고장 나도 인증/요청 동작은 그대로 유지한다.
@@ -24,9 +25,11 @@ export function saveAuth(a) { state.auth = a; if (a) sessionStorage.setItem(KEY,
 export function syncAccount(me) {
   if (!state.auth || !me.user) return;
   saveAuth({ ...state.auth, user: { ...state.auth.user, ...me.user, role: me.role ?? me.user.role, limits: me.limits },
-    minutes: me.limits.sessionMinutes, expiresAtLocal: Number.isFinite(me.remainingSec) ? Date.now() + me.remainingSec * 1000 : state.auth.expiresAtLocal });
+    minutes: me.limits.sessionMinutes, ...(me.logins ? { logins: me.logins } : {}), expiresAtLocal: Number.isFinite(me.remainingSec) ? Date.now() + me.remainingSec * 1000 : state.auth.expiresAtLocal });
 }
 export const sessionMinutes = () => state.auth?.minutes ?? state.auth?.user?.limits?.sessionMinutes;
+/** 최근 24시간 로그인 현황 { limit, used, left, nextAt } (서버가 알려 준 값, 없으면 null) */
+export const loginQuota = () => state.auth?.logins ?? null;
 export const remaining = () => state.auth ? Math.max(0, Math.round((state.auth.expiresAtLocal - Date.now()) / 1000)) : 0;
 
 let onAuthLost = () => {};
@@ -50,7 +53,7 @@ export async function api(path, opts = {}) {
   if (r.status >= 500) telemetry('api_5xx', `HTTP ${r.status}`, requestBase);
   const j = await r.json().catch(() => { telemetry('api_json', 'API response JSON parsing failed', requestBase); return {}; });
   if (!r.ok) {
-    const e = Object.assign(new Error(j.error || `HTTP ${r.status}`), { status: r.status, code: j.code, usage: j.usage });
+    const e = Object.assign(new Error(j.error || `HTTP ${r.status}`), { status: r.status, code: j.code, usage: j.usage, nextLoginAt: j.nextLoginAt ?? null, loginLimit: j.loginLimit ?? null });
     if (r.status === 401 && state.auth && !opts.noAuth) onAuthLost(e.message, e.code);
     if (r.status === 403 && j.code === 'MUST_CHANGE_PASSWORD') onMustChange();
     throw e;
@@ -67,7 +70,7 @@ export async function loadAuthImage(img, path) {
 }
 async function probe() {
   const h = await api('/healthz', { timeoutMs: 8000, noAuth: true });
-  state.authMode = h.auth?.mode ?? 'off';
+  state.authMode = h.auth?.mode ?? 'off'; state.roleLimits = h.auth?.roleLimits ?? null;
   return h;
 }
 /** 서버 상태 확인. 기본 주소(config.js)가 안 되면 예비 주소를 차례로 시도한다(기기에 직접 저장한 주소는 그대로 존중). */
@@ -82,7 +85,7 @@ export async function health() {
 }
 export async function login(loginId, password) {
   const r = await api('/v1/auth/login', { method: 'POST', body: JSON.stringify({ loginId, password, client: 'pages' }), noAuth: true });
-  saveAuth({ token: r.token, expiresAtLocal: Date.now() + r.session.minutes * 60000, minutes: r.session.minutes, user: r.user });
+  saveAuth({ token: r.token, expiresAtLocal: Date.now() + r.session.minutes * 60000, minutes: r.session.minutes, user: r.user, logins: r.logins ?? null });
   return r;
 }
 export async function logout(reason = 'logout') {
