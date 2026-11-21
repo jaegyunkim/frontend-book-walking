@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage, nextLoginText, timesKo } from './role-policy.js?v=0.4.21';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage, nextLoginText, timesKo } from './role-policy.js?v=0.4.22';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes, loginQuota } from './auth.js?v=0.4.21';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes, loginQuota } from './auth.js?v=0.4.22';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -129,9 +129,9 @@ function renderPlan({ id, plan: p, voice, script = null }) {
   function detailButton(item, kind, point = item) {
     if (!item.name || !pointOf(point)) return '<small class="muted">상세 위치 미제공</small>';
     const index = destinations.push({ ...item, ...pointOf(point), kind }) - 1;
-    return `<button type="button" class="ghost small dest-open" data-destination="${index}" aria-label="${esc(item.name)} 상세 정보">상세 정보</button>`;
+    return `<button type="button" class="act small dest-open" data-destination="${index}" aria-label="${esc(item.name)} 상세 정보·가는 길 보기">${actBtn('상세 정보·가는 길', '📍')}</button>`;
   }
-  const nearbyList = (arr, title, note = '') => arr?.length ? `<div class="sec"><h3>${title}<small>${note}</small></h3><ul class="places">${arr.map(x => `<li><span>${safeUrl(x.url) ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>` : esc(x.name)} <small class="muted">${esc(x.category ?? x.type ?? '')}</small><br>${detailButton(x, x.category ?? x.type ?? title)}</span><span class="d">${x.distanceM != null ? km(x.distanceM) : ''}</span></li>`).join('')}</ul></div>` : '';
+  const nearbyList = (arr, title, note = '') => arr?.length ? `<div class="sec"><h3>${title}<small>${note}</small></h3>${tapHint('이름을 누르면 안내 페이지가, 상세 정보를 누르면 가는 길·이동 비용이 열려요')}<ul class="places">${arr.map(x => `<li><span>${safeUrl(x.url) ? `<a class="ext" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>` : esc(x.name)} <small class="muted">${esc(x.category ?? x.type ?? '')}</small><br>${detailButton(x, x.category ?? x.type ?? title)}</span><span class="d">${x.distanceM != null ? km(x.distanceM) : ''}</span></li>`).join('')}</ul></div>` : '';
   $('#planResult').innerHTML = `
     <p id="planTokenTag" class="token-tag" hidden></p>
     <div class="metric-strip">
@@ -149,7 +149,7 @@ function renderPlan({ id, plan: p, voice, script = null }) {
     ${nearbyList(p.indoor, '☔ 실내에서 읽기', '도서관·북카페')}
     ${nearbyList(p.nearby.bookstores, '🏬 코스 근처 서점', '카카오 로컬')}
     ${nearbyList(p.nearby.spots, '📍 코스 근처 관광지', '한국관광공사')}
-    ${p.nearby.camps?.length ? `<div class="sec"><h3>🏕️ 근처 캠핑장 <small>한국관광공사 고캠핑</small></h3><ul class="places">${p.nearby.camps.map(c => `<li><span>${safeUrl(c.homepage) ? `<a href="${esc(c.homepage)}" target="_blank" rel="noopener">${esc(c.name)}</a>` : esc(c.name)} <small class="muted">${esc(c.type ?? '')}</small><br><small class="muted">${esc(c.address ?? '')}</small><br>${detailButton(c, '캠핑장')}</span><a class="d" href="https://map.kakao.com/link/to/${encodeURIComponent(c.name)},${c.lat},${c.lon}" target="_blank" rel="noopener">길찾기</a></li>`).join('')}</ul></div>` : ''}
+    ${p.nearby.camps?.length ? `<div class="sec"><h3>🏕️ 근처 캠핑장 <small>한국관광공사 고캠핑</small></h3><ul class="places">${p.nearby.camps.map(c => `<li><span>${safeUrl(c.homepage) ? `<a class="ext" href="${esc(c.homepage)}" target="_blank" rel="noopener">${esc(c.name)}</a>` : esc(c.name)} <small class="muted">${esc(c.type ?? '')}</small><br><small class="muted">${esc(c.address ?? '')}</small><br>${detailButton(c, '캠핑장')}</span><a class="link-btn" href="https://map.kakao.com/link/to/${encodeURIComponent(c.name)},${c.lat},${c.lon}" target="_blank" rel="noopener"><span aria-hidden="true">🧭</span>길찾기<b aria-hidden="true">↗</b></a></li>`).join('')}</ul></div>` : ''}
     ${p.drive ? `<div class="sec"><h3>🚗 캠핑장까지 <small>카카오모빌리티·오피넷·ITS</small></h3><p>${esc(p.drive.to)}까지 약 <b>${p.drive.distanceKm ?? '-'}km · ${p.drive.minutes ?? '-'}분</b>${p.drive.toll ? `, 통행료 ${p.drive.toll.toLocaleString()}원` : ''}${p.drive.fuel ? `, 왕복 기름값 약 ${p.drive.fuel.estimateKrw.toLocaleString()}원` : ''}</p>${p.drive.fuel ? `<p class="muted">${esc(p.drive.fuel.basis)} (휘발유 ${p.drive.fuel.price}원/L)</p>` : ''}${p.drive.incidents.length ? `<ul class="reasons">${p.drive.incidents.slice(0, 3).map(x => `<li>${esc(x.road ?? '')} ${esc(x.type ?? '')}: ${esc(x.message)}</li>`).join('')}</ul>` : '<p class="muted">가는 길에 사고·공사 소식은 없어요(현재 기준)</p>'}</div>` : ''}
     ${p.crowd ? `<div class="sec"><h3>👥 방문 혼잡 <small>${esc(p.crowd.note)}</small></h3><p>${esc(p.crowd.name)} 같은 요일 평균 방문자는 평소의 <b>${Math.round(p.crowd.ratio * 100)}%</b> — ${esc(p.crowd.crowd)}</p></div>` : ''}
     ${p.weather.message ? `<details class="sec"><summary>기상청 예보관 통보문</summary><p class="muted" style="white-space:pre-line">${esc(p.weather.message)}</p></details>` : ''}
@@ -158,13 +158,13 @@ function renderPlan({ id, plan: p, voice, script = null }) {
   $('#btnScript').onclick = () => makeAudio(id, voice);
   if (script) makeAudio(id, voice, { saved: true }); // 이미 만든 대본은 다시 만들지 않고 바로 보여 준다(서버 저장분 · 토큰·횟수 차감 없음)
   $('#planResult').querySelectorAll('[data-shelf]').forEach(b => b.onclick = () => addShelf(JSON.parse(b.dataset.shelf), b));
-  $('#planResult').querySelectorAll('[data-diary]').forEach(b => b.onclick = () => { const c = courses[Number(b.dataset.diary)]; $('#diaryCourse').value = c?.name ?? ''; $('#diaryBook').value = p.books[0]?.title ?? ''; go('diary'); });
+  $('#planResult').querySelectorAll('[data-diary]').forEach(b => b.onclick = e => { e.preventDefault(); const c = courses[Number(b.dataset.diary)]; $('#diaryCourse').value = c?.name ?? ''; $('#diaryBook').value = p.books[0]?.title ?? ''; go('diary'); });
   renderTokens();
   $('#planResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function bookHtml(b, situation) {
   const data = esc(JSON.stringify({ itemId: b.itemId, isbn13: b.isbn13, title: b.title, author: b.author, cover: b.cover, link: b.link, situation }));
-  return `<div class="book">${safeUrl(b.cover) ? `<img src="${esc(b.cover)}" alt="" loading="lazy">` : '<div></div>'}<div><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author)}${b.publisher ? ' · ' + esc(b.publisher) : ''}${b.category ? ' · ' + esc(b.category) : ''}${b.rank ? ` · ${b.rank}위` : ''}</div>${b.intro ? `<div class="i">${esc(b.intro)}</div>` : ''}<div class="acts">${safeUrl(b.link) ? `<a href="${esc(b.link)}" target="_blank" rel="noopener" class="ghost small yes24" aria-label="예스24에서 ${esc(b.title)} 보기">예스24</a>` : ''}<button class="ghost small" type="button" data-shelf="${data}">책장에 담기</button></div></div></div>`;
+  return `<div class="book">${safeUrl(b.cover) ? `<img src="${esc(b.cover)}" alt="" loading="lazy">` : '<div></div>'}<div><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author)}${b.publisher ? ' · ' + esc(b.publisher) : ''}${b.category ? ' · ' + esc(b.category) : ''}${b.rank ? ` · ${b.rank}위` : ''}</div>${b.intro ? `<div class="i">${esc(b.intro)}</div>` : ''}<div class="acts">${safeUrl(b.link) ? `<a href="${esc(b.link)}" target="_blank" rel="noopener" class="ghost small yes24" aria-label="예스24에서 ${esc(b.title)} 보기">예스24<b aria-hidden="true">↗</b></a>` : ''}<button class="ghost small" type="button" data-shelf="${data}">책장에 담기</button></div></div></div>`;
 }
 function courseHtml(c, i, detail) {
   const g = c.safety?.gate;
@@ -172,7 +172,7 @@ function courseHtml(c, i, detail) {
     <div class="meta">출발지에서 ${c.travelKm}km · 코스 ${c.distanceKm ?? '-'}km · ${c.minutes ? Math.round(c.minutes / 6) / 10 + '시간' : '-'} · ${esc(c.levelName ?? '')} · ${esc(c.sigun ?? '')}</div>
     ${c.summary ? `<p>${esc(c.summary.split('\n')[0].replace(/^-\s*/, ''))}</p>` : ''}
     ${c.tip ? `<p class="muted">👣 ${esc(c.tip)}</p>` : ''}${c.safety?.sea ? `<p class="muted">🌊 ${esc(c.safety.sea.name)} 실측 파고 ${c.safety.sea.wave ?? '-'}m · 풍속 ${c.safety.sea.wind ?? '-'}m/s (${esc(c.safety.sea.observedAt)})</p>` : ''}
-    <div class="links">${detail}${pointOf(c.start) ? `<a href="https://map.kakao.com/link/map/${encodeURIComponent(c.name + ' 시작점')},${c.start.lat},${c.start.lon}" target="_blank" rel="noopener">지도 보기</a><a href="https://map.kakao.com/link/to/${encodeURIComponent(c.name + ' 시작점')},${c.start.lat},${c.start.lon}" target="_blank" rel="noopener">길찾기</a>` : ''}<a href="https://www.durunubi.kr/" target="_blank" rel="noopener">두루누비</a><a href="#" data-diary="${i}">다녀왔어요</a></div></div>`;
+    <div class="links">${detail}${pointOf(c.start) ? `<a href="https://map.kakao.com/link/map/${encodeURIComponent(c.name + ' 시작점')},${c.start.lat},${c.start.lon}" target="_blank" rel="noopener"><span aria-hidden="true">🗺️</span>지도<b aria-hidden="true">↗</b></a><a href="https://map.kakao.com/link/to/${encodeURIComponent(c.name + ' 시작점')},${c.start.lat},${c.start.lon}" target="_blank" rel="noopener"><span aria-hidden="true">🧭</span>길찾기<b aria-hidden="true">↗</b></a>` : ''}<a href="https://www.durunubi.kr/" target="_blank" rel="noopener">두루누비<b aria-hidden="true">↗</b></a><a href="#" data-diary="${i}"><span aria-hidden="true">✍️</span>다녀왔어요</a></div></div>`;
 }
 // 버튼 바로 아래 말풍선(안내·오류). 같은 버튼에 다시 띄우면 바꿔 끼운다. 토스트와 같은 디자인
 function bubble(anchor, msg, kind = 'warn') {
@@ -227,7 +227,7 @@ async function loadShelf() {
   const el = $('#shelfList');
   try {
     const r = await api('/v1/me/shelf');
-    el.innerHTML = r.books.map(b => `<div class="book">${safeUrl(b.cover) ? `<img src="${esc(b.cover)}" alt="" loading="lazy">` : '<div></div>'}<div><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author ?? '')}</div><div class="acts">${safeUrl(b.link) ? `<a href="${esc(b.link)}" target="_blank" rel="noopener" class="ghost small yes24" aria-label="예스24에서 ${esc(b.title)} 보기">예스24</a>` : ''}<button class="ghost small" type="button" data-use="${esc(b.title)}">일기 쓰기</button><button class="ghost small" type="button" data-del="${b.itemId}" aria-label="${esc(b.title)} 책장에서 빼기">책장 정리</button></div></div></div>`).join('') || '<p class="empty">아직 담은 책이 없어요. 오늘 탭에서 추천받은 책을 담아 보세요.</p>';
+    el.innerHTML = r.books.map(b => `<div class="book">${safeUrl(b.cover) ? `<img src="${esc(b.cover)}" alt="" loading="lazy">` : '<div></div>'}<div><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author ?? '')}</div><div class="acts">${safeUrl(b.link) ? `<a href="${esc(b.link)}" target="_blank" rel="noopener" class="ghost small yes24" aria-label="예스24에서 ${esc(b.title)} 보기">예스24<b aria-hidden="true">↗</b></a>` : ''}<button class="ghost small" type="button" data-use="${esc(b.title)}">일기 쓰기</button><button class="ghost small" type="button" data-del="${b.itemId}" aria-label="${esc(b.title)} 책장에서 빼기">책장 정리</button></div></div></div>`).join('') || '<p class="empty">아직 담은 책이 없어요. 오늘 탭에서 추천받은 책을 담아 보세요.</p>' + goBtn('books', '상황별 책 보러 가기', '📚');
     el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { await api('/v1/me/shelf/' + b.dataset.del, { method: 'DELETE' }); loadShelf(); });
     el.querySelectorAll('[data-use]').forEach(b => b.onclick = () => { $('#diaryBook').value = b.dataset.use; go('diary'); });
   } catch (e) { el.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
@@ -372,6 +372,11 @@ const actionHintNeeded = () => { try { return Number(localStorage.getItem(ACT_KE
 const actionUsed = () => { try { localStorage.setItem(ACT_KEY, String(Number(localStorage.getItem(ACT_KEY) || 0) + 1)); } catch { /* 저장 못 해도 동작에는 영향 없음 */ } };
 /** 같은 묶음에서 누른 버튼은 채우고 나머지는 흐리게 */
 function pickAct(btn, group = btn.parentElement) { actionUsed(); group.querySelectorAll('.act').forEach(x => x.classList.toggle('picked', x === btn)); group.classList.add('used'); group.classList.remove('fresh'); }
+/** 목록 위 안내 한 줄 */
+const tapHint = text => `<div class="tap-hint">👇 ${text}</div>`;
+/** 빈 화면에서 다른 탭으로 보내는 버튼(data-go) */
+const goBtn = (tab, label, ico) => `<div class="actions empty-go"><button type="button" class="act" data-go="${tab}">${actBtn(label, ico)}</button></div>`;
+document.addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b && !b.closest('.tabbar')) go(b.dataset.go); });
 const actBtn = (label, ico = '💬', go = '›') => `<span class="act-ico" aria-hidden="true">${ico}</span><span class="act-label">${esc(label)}</span><span class="act-go" aria-hidden="true">${go}</span>`;
 
 // ---------- 오늘의 북 워킹(하루 한 번 말풍선, 음성은 버튼을 눌렀을 때만) ----------
@@ -418,14 +423,14 @@ async function loadHistory() {
   const box = $('#history'); box.innerHTML = '<p class="loading">기록을 불러오는 중…</p>';
   try {
     const { plans } = await api('/v1/me/plans?limit=100');
-    if (!plans.length) { box.innerHTML = '<p class="empty">아직 만든 북 워킹이 없어요. 오늘 탭에서 첫 북 워킹을 만들어 보세요!</p>'; return; }
+    if (!plans.length) { box.innerHTML = '<p class="empty">아직 만든 북 워킹이 없어요. 오늘 탭에서 첫 북 워킹을 만들어 보세요!</p>' + goBtn('plan', '첫 북 워킹 만들러 가기', '🚶'); return; }
     const days = {}; for (const p of plans) (days[kst(p.created_at).date] ??= []).push(p);
     box.innerHTML = Object.entries(days).map(([d, ps], i) => `<details class="hist-day"${i === 0 ? ' open' : ''}><summary><b>${esc(d)}</b><span class="muted">북 워킹 ${ps.length}개</span></summary>${ps.map(p => `
       <div class="hist-item">${safeUrl(p.cover) ? `<img src="${esc(p.cover)}" alt="" loading="lazy">` : '<div></div>'}<div>
         <div class="muted small-text">${esc(kst(p.created_at).time)} · ${esc(p.trip_date)} · ${esc(p.emoji ?? '')} ${esc(p.situation_label ?? p.situation ?? '')}</div>
         <b>${esc(p.sigungu ?? '')}</b> <span class="tag ${p.gate}">${esc(p.gate_name ?? p.gate ?? '')} ${p.score ?? ''}</span>
         <div class="small-text">${esc(p.course ?? '동네 산책')}${p.book ? ` · 『${esc(p.book)}』` : ''}${p.has_script ? ' · 🎧' : ''}</div>
-        <div class="acts"><button type="button" class="ghost small" data-view="${p.id}">다시 보기</button><button type="button" class="act small" data-again="${p.id}" data-place="${esc(p.sigungu ?? '')}" data-sit="${esc(p.situation ?? '')}" data-comp="${esc(p.companion ?? '')}">${actBtn('오늘 다시 만들기', '🚶')}</button></div>
+        <div class="acts"><button type="button" class="act small act-primary" data-view="${p.id}">${actBtn('다시 보기', '📖')}</button><button type="button" class="act small" data-again="${p.id}" data-place="${esc(p.sigungu ?? '')}" data-sit="${esc(p.situation ?? '')}" data-comp="${esc(p.companion ?? '')}">${actBtn('오늘 다시 만들기', '🚶')}</button></div>
       </div></div>`).join('')}</details>`).join('') + '<p class="muted small-text">플랜은 서비스 개선과 운영을 위해 30일간 보관된 뒤 자동으로 지워져요.</p>';
     box.querySelectorAll('[data-view]').forEach(b => b.onclick = async () => { try { const r = await api('/v1/plans/' + b.dataset.view); lastPlan = { id: r.id, plan: r.plan, voice: true, script: r.script ?? null }; go('plan'); renderPlan(lastPlan); } catch (e) { toast(e.message); } });
     box.querySelectorAll('[data-again]').forEach(b => b.onclick = () => { if (tokenLocked) { toast(TOKEN_EMPTY_MSG); return; } pickAct(b, box); setOrigin(b.dataset.place); sel.situation = b.dataset.sit || null; sel.companion = ['solo', 'pair', 'family', 'group'].includes(b.dataset.comp) ? b.dataset.comp : null; sel.date = 'today'; go('plan'); drawForm(); (skipAskOnce = true, $('#planForm').requestSubmit()); });

@@ -595,3 +595,17 @@ button.act:disabled, button.act.locked { opacity: .45; box-shadow: none; cursor:
 @keyframes actGlow { 0%, 100% { box-shadow: 0 2px 6px rgba(47,107,79,.15); } 50% { box-shadow: 0 0 0 4px rgba(242,193,78,.45), 0 2px 10px rgba(47,107,79,.3); } }
 @media (prefers-reduced-motion: reduce) { .actions.fresh button.act { animation: none; } button.act { transition: none; } }
 .today-tip-actions .act { flex: 1 1 auto; }
+
+/* v0.4.22 누를 수 있는 카드·행·링크 공통 표시(오늘 결과·책·기록·빈 화면) (go-fishing v1.22.0) */
+.sec .tap-hint { margin: -2px 2px 8px; font-weight: 600; font-size: 12px; }
+.places a.ext { color: var(--accent-text); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.places a.ext::after { content: ' ↗'; font-size: 11px; display: inline-block; margin-left: 2px; text-decoration: none; }
+.places .act.dest-open { margin-top: 6px; }
+.places a.link-btn { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 0 12px; border: 1.5px solid var(--accent); border-radius: var(--r-sm); background: #fff; color: var(--accent-text); font-size: 13px; font-weight: 700; white-space: nowrap; text-decoration: none; align-self: center; }
+.places a.link-btn:active, .links a:active { transform: scale(.97); }
+.links a b, .yes24 b, .link-btn b { font-size: 12px; margin-left: 3px; color: var(--accent); }
+.links a span[aria-hidden], .link-btn span[aria-hidden] { margin-right: 4px; }
+button.act.act-primary { background: var(--accent); border-color: transparent; color: #fff; box-shadow: 0 4px 12px rgba(47,107,79,.25); }
+button.act.act-primary .act-go { color: #fff; }
+.empty-go { justify-content: center; margin: 4px 0 12px; }
+@media (prefers-reduced-motion: reduce) { .places a.link-btn:active, .links a:active { transform: none; } }
