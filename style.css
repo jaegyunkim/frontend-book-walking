@@ -566,3 +566,13 @@ body { word-break: keep-all; overflow-wrap: anywhere; } /* 한국어는 낱말 �
 @media (hover: hover) { .eye-btn:hover { color: var(--accent); background: var(--accent-soft); } } /* 터치 화면은 누른 뒤 배경이 남지 않게 */
 .eye-btn:focus-visible { color: var(--accent); background: var(--accent-soft); }
 .eye-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* v0.4.20 남은 AI 사용량 표시·소진 잠금·입력창 지우기 (go-fishing v1.20.0) */
+.token-left { margin: 8px 2px 0; font-size: 13px; font-weight: 600; color: var(--mute); text-align: center; }
+.token-left.warn, .token-tag.warn { color: var(--warn); }
+.token-tag { display: block; text-align: right; font-size: 11.5px; line-height: 1.3; color: var(--mute); margin: 0 0 6px; white-space: nowrap; }
+.plan-form.token-empty textarea { opacity: .6; cursor: not-allowed; }
+.plan-form.token-empty #btnPlan { opacity: .45; cursor: not-allowed; }
+.clearable.area textarea { width: 100%; box-sizing: border-box; padding-right: 44px; }
+.clearable.area .clear-btn { top: 8px; transform: none; }
+#searchForm .clearable { min-width: 0; }

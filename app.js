@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage, nextLoginText } from './role-policy.js?v=0.4.19';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage, nextLoginText, timesKo } from './role-policy.js?v=0.4.20';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes, loginQuota } from './auth.js?v=0.4.19';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes, loginQuota } from './auth.js?v=0.4.20';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -83,11 +83,12 @@ function askBeforePlan() {
 }
 $('#planForm').onsubmit = async e => {
   e.preventDefault();
+  if (tokenLocked) { toast(TOKEN_EMPTY_MSG); return; } // 오늘 AI 사용량을 다 쓰면 요청하지 않는다
   const origin = originValue(); if (!origin) { toast('출발지를 먼저 골라 주세요'); return; }
   const skip = skipAskOnce; skipAskOnce = false;
   if (!skip && !(await askBeforePlan())) return;
   localStorage.setItem('bookwalking.origin', $('#origin').value.trim());
-  const btn = $('#btnPlan'); btn.disabled = true; btn.textContent = '데이터 모으는 중…';
+  const btn = $('#btnPlan'); planning = true; btn.disabled = true; btn.textContent = '데이터 모으는 중…';
   const steps = ['기상청 예보', '에어코리아 미세먼지', '두루누비 걷기길', '예스24 상황별 베스트', 'AI 도서 추천', '주변 서점·관광지'];
   let i = 0; $('#planResult').innerHTML = `<div class="loading">북 워킹을 만들고 있어요 · <b id="stepName">${steps[0]}</b></div>`;
   const tick = setInterval(() => { i = (i + 1) % steps.length; const s = $('#stepName'); if (s) s.textContent = steps[i]; }, 900);
@@ -95,7 +96,7 @@ $('#planForm').onsubmit = async e => {
     const r = await api('/v1/plans', { method: 'POST', body: JSON.stringify({ origin, date: dateValue(), situation: sel.situation, companion: sel.companion, message: $('#message').value.trim() || undefined }), timeoutMs: 90000 });
     lastPlan = r; renderPlan(r); refreshUsage();
   } catch (err) { if (err.code === 'AI_CREDIT_EXHAUSTED') refreshUsage(); $('#planResult').innerHTML = `<p class="msg">${esc(err.message)}</p>`; }
-  finally { clearInterval(tick); btn.disabled = false; btn.textContent = '북 워킹 만들기'; }
+  finally { clearInterval(tick); planning = false; btn.textContent = '북 워킹 만들기'; renderTokens(); }
 };
 
 // ---------- 산책 예정일의 날씨 카드(캔바 시안 v0.4.18): 상태 칩 + 팁 + 시간별 예보 칸(카드 너비를 고르게 채움) ----------
@@ -132,6 +133,7 @@ function renderPlan({ id, plan: p, voice, script = null }) {
   }
   const nearbyList = (arr, title, note = '') => arr?.length ? `<div class="sec"><h3>${title}<small>${note}</small></h3><ul class="places">${arr.map(x => `<li><span>${safeUrl(x.url) ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>` : esc(x.name)} <small class="muted">${esc(x.category ?? x.type ?? '')}</small><br>${detailButton(x, x.category ?? x.type ?? title)}</span><span class="d">${x.distanceM != null ? km(x.distanceM) : ''}</span></li>`).join('')}</ul></div>` : '';
   $('#planResult').innerHTML = `
+    <p id="planTokenTag" class="token-tag" hidden></p>
     <div class="metric-strip">
       <div class="metric"><div class="metric-num ${w.gate}">${w.score}</div><div class="metric-label">${esc(w.gateName)}</div></div>
       <div class="metric"><div class="metric-num">${s?.temp ? `${s.temp.min}~${s.temp.max}°` : p.weather.mid?.temp?.min != null ? `${p.weather.mid.temp.min}~${p.weather.mid.temp.max}°` : '-'}</div><div class="metric-label">${esc(p.dateLabel.slice(5))} 기온</div></div>
@@ -157,6 +159,7 @@ function renderPlan({ id, plan: p, voice, script = null }) {
   if (script) makeAudio(id, voice, { saved: true }); // 이미 만든 대본은 다시 만들지 않고 바로 보여 준다(서버 저장분 · 토큰·횟수 차감 없음)
   $('#planResult').querySelectorAll('[data-shelf]').forEach(b => b.onclick = () => addShelf(JSON.parse(b.dataset.shelf), b));
   $('#planResult').querySelectorAll('[data-diary]').forEach(b => b.onclick = () => { const c = courses[Number(b.dataset.diary)]; $('#diaryCourse').value = c?.name ?? ''; $('#diaryBook').value = p.books[0]?.title ?? ''; go('diary'); });
+  renderTokens();
   $('#planResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function bookHtml(b, situation) {
@@ -180,6 +183,7 @@ function bubble(anchor, msg, kind = 'warn') {
 }
 async function makeAudio(id, voice, { saved = false } = {}) {
   const box = $('#audioBox'), btn = $('#btnScript');
+  if (!saved && tokenLocked) { bubble(btn, TOKEN_EMPTY_MSG); return; } // 만들어 둔 대본 불러오기는 차감 없음
   btn.disabled = true; btn.textContent = saved ? '만들어 둔 대본 불러오는 중…' : '대본 쓰는 중…'; box.querySelectorAll('.bubble').forEach(x => x.remove());
   try {
     const r = await api(`/v1/plans/${id}/script`, { method: 'POST', body: '{}', timeoutMs: 90000 });
@@ -437,7 +441,7 @@ $('#opinionForm').onsubmit = async e => {
 // 로그인 이용 안내: 서버 기본 한도(/healthz)를 따르고, 없으면 화면에 둔 기본값
 const showLoginPolicy = () => { $('#loginPolicy').textContent = policyText('user', state.roleLimits?.user) + '. 계정마다 다를 수 있어요. ' + DAY_NOTE; };
 showLoginPolicy();
-let usage = null, aiLocked = false;
+let usage = null, aiLocked = false, planning = false;
 async function refreshUsage() {
   const token = state.auth?.token;
   if (!token) return;
@@ -449,17 +453,63 @@ async function refreshUsage() {
     usage = { limits: me.limits, today: me.usage.today, session: me.session?.messages ?? 0 };
     applyAiLock(me.ai);
   } catch { if (token === state.auth?.token) usage = null; /* 401은 자동 로그아웃 처리 */ }
+  renderTokens();
+}
+// 관리자가 바꾼 한도(세션 시간·로그인 횟수·토큰)와 남은 시간을 1분마다 서버 값으로 맞춘다(화면이 보일 때만)
+setInterval(() => { if (state.auth && document.visibilityState === 'visible') refreshUsage(); }, 60000);
+
+// ---------- 남은 AI 사용량(토큰) 표시·소진 잠금 ----------
+// 오늘 토큰을 다 쓰면 만들기·한마디·오늘의 추천 만들기·오디오 대본을 막는다. 날짜가 바뀌거나 한도가 늘면 1분 안에 자동으로 풀린다.
+const fmt = v => Number(v || 0).toLocaleString('ko-KR');
+const hasTokens = () => usage?.limits?.dailyTokens != null && usage?.today?.tokens != null;
+const tokensLeft = () => hasTokens() ? Math.max(0, usage.limits.dailyTokens - usage.today.tokens) : null;
+const tokenText = () => `${fmt(tokensLeft())} / ${fmt(usage.limits.dailyTokens)}`;
+const TOKEN_EMPTY_MSG = '오늘 쓸 수 있는 AI 사용량을 모두 썼어요. 내일(한국 시간 밤 12시 지나서) 다시 만들어 주세요.';
+const MSG_PLACEHOLDER = '예: 토요일에 아이랑 가볍게 걷고 그림책도 읽고 싶어요';
+let tokenLocked = false;
+function renderTokens() {
+  tokenLocked = !!(state.auth && hasTokens() && tokensLeft() <= 0);
+  const el = $('#tokenLeft'), low = hasTokens() && tokensLeft() <= usage.limits.dailyTokens * 0.1;
+  el.hidden = !hasTokens();
+  if (hasTokens()) el.textContent = tokenLocked ? '🔋 ' + TOKEN_EMPTY_MSG : `🔋 오늘 남은 AI 사용량 ${tokenText()} 토큰`;
+  el.classList.toggle('warn', low);
+  const tag = $('#planTokenTag'); if (tag) { tag.hidden = !hasTokens(); if (hasTokens()) tag.textContent = `남은 AI 사용량 ${tokenText()}`; tag.classList.toggle('warn', low); }
+  $('#btnPlan').disabled = !!aiLocked || tokenLocked || planning;
+  const m = $('#message');
+  if (tokenLocked && m.value) { m.value = ''; m.dispatchEvent(new Event('input', { bubbles: true })); }
+  m.disabled = tokenLocked; m.placeholder = tokenLocked ? '오늘 AI 사용량을 모두 써서 새 북 워킹을 만들 수 없어요' : MSG_PLACEHOLDER;
+  $('#planForm').classList.toggle('token-empty', tokenLocked);
+  $('#todayTipMore').disabled = tokenLocked;
+}
+/** 로그아웃 확인창: 이용 조건(로그인 횟수·이용 시간·자동 로그아웃·하루 AI 사용량)을 계정 한도 값으로 짧게 */
+function logoutText() {
+  const L = usage?.limits ?? state.auth?.user?.limits, lq = loginQuota();
+  if (!L && !lq) return '이용해 주셔서 감사합니다.\n' + logoutUsage(null, null);
+  const lines = [`• 24시간에 ${timesKo(L?.dailySessions ?? lq.limit)}, 한 번에 ${sessionMinutes() ?? L?.sessionMinutes}분 동안 이용할 수 있어요.`];
+  if (lq) lines.push('• ' + nextLoginText(lq));
+  lines.push('• 15분 동안 아무 조작이 없으면 자동으로 로그아웃돼요.');
+  if (L?.dailyTokens != null) lines.push(`• AI 사용량은 하루 ${fmt(L.dailyTokens)} 토큰이에요${hasTokens() ? `(지금 ${fmt(tokensLeft())} 남음)` : ''}. 다 쓰면 그날은 새 북 워킹을 만들 수 없어요.`);
+  lines.push('• ' + DAY_NOTE);
+  return '이용해 주셔서 감사합니다.\n' + lines.join('\n');
 }
 function applyAiLock(ai) {
   aiLocked = ai && ai.available === false && state.auth?.user?.role !== 'admin';
   $('#aiLock').hidden = !aiLocked; if (aiLocked) { $('#aiLockMsg').textContent = ai.message || '지금은 AI 이용량이 모두 소진되어 잠시 이용할 수 없어요.'; hideTip(); }
-  $('#btnPlan').disabled = !!aiLocked;
+  $('#btnPlan').disabled = !!aiLocked || tokenLocked || planning;
 }
 async function openSettings() {
   await refreshUsage();
   const a = state.auth; if (!a) return;
   $('#accountInfo').textContent = `${a.user.displayName}(${a.user.loginId}) · ${ROLE_LABEL[a.user.role] ?? a.user.role} · 남은 시간 ${Math.floor(remaining() / 60)}분 ${remaining() % 60}초`;
-  $('#usageInfo').textContent = usage ? `이번 로그인(${usage.limits.sessionMinutes}분) 질문 ${usage.session}/${usage.limits.sessionMessages}건 · 오늘 질문 ${usage.today.messages}/${usage.limits.dailyMessages}건 · 오늘 로그인 ${usage.today.sessions}/${usage.limits.dailySessions}회 · 오늘 AI 사용량 ${usage.today.tokens}/${usage.limits.dailyTokens}개. ${DAY_NOTE}` : '사용량을 확인할 수 없어요.';
+  $('#usageInfo').textContent = usage ? [
+    `이번 로그인 이용 시간: ${usage.limits.sessionMinutes}분`,
+    `이번 로그인에서 한 질문: ${fmt(usage.session)}건 (최대 ${fmt(usage.limits.sessionMessages)}건)`,
+    `오늘 한 질문: ${fmt(usage.today.messages)}건 (하루 최대 ${fmt(usage.limits.dailyMessages)}건)`,
+    loginQuota() ? `최근 24시간 로그인: ${fmt(loginQuota().used)}번 (24시간에 최대 ${fmt(loginQuota().limit)}번)` : `로그인: 24시간에 최대 ${fmt(usage.limits.dailySessions)}번`,
+    hasTokens() ? `오늘 남은 AI 사용량: ${tokenText()} 토큰` : '',
+    '※ 토큰은 AI가 요청을 읽고 북 워킹·오디오 대본을 만드는 데 쓰는 양이에요. 한마디가 길거나 결과가 자세할수록 많이 줄어요.',
+    DAY_NOTE
+  ].filter(Boolean).join('\n') : '사용량을 확인할 수 없어요.';
   $('#settingsDialog').showModal();
 }
 $('#btnSettings').onclick = openSettings;
@@ -497,12 +547,12 @@ function showLogin(msg = '') {
   timer?.stop(); timer = null; hideTip(); applyAiLock(null);
   for (const d of ['#settingsDialog', '#placesDialog', '#pwDialog', '#logoutDialog', '#destinationDialog']) if ($(d).open) $(d).close();
   $('#appView').hidden = true; $('#loginView').hidden = false; $('#loginMsg').textContent = msg; $('#loginMsg').dataset.kind = 'info'; $('#btnAdmin').hidden = true;
-  usage = null;
+  usage = null; renderTokens();
   const id = localStorage.getItem('bookwalking.loginId'); if (id) { $('#loginId').value = id; $('#rememberId').checked = true; }
   syncClearButtons();
 }
 // 입력칸 오른쪽 ⓧ: 값이 있을 때만 보이고, 누르면 지운 뒤 그 칸에 다시 포커스(어디물어와 같은 방식)
-document.querySelectorAll('input[data-clearable]').forEach(inp => {
+document.querySelectorAll('input[data-clearable], textarea[data-clearable]').forEach(inp => {
   const btn = inp.parentElement.querySelector('.clear-btn'); if (!btn) return;
   const sync = () => { btn.hidden = !inp.value; };
   ['input', 'change', 'focus'].forEach(ev => inp.addEventListener(ev, sync));
@@ -511,7 +561,7 @@ document.querySelectorAll('input[data-clearable]').forEach(inp => {
   btn.onclick = e => { e.preventDefault(); inp.value = ''; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.focus(); };
 });
 // 값을 코드로 넣은 뒤(저장된 아이디 등) ⓧ 표시를 맞춘다. 함수 선언이라 모듈 초기화 순서와 무관
-function syncClearButtons() { document.querySelectorAll('input[data-clearable]').forEach(inp => { const b = inp.parentElement.querySelector('.clear-btn'); if (b) b.hidden = !inp.value; }); }
+function syncClearButtons() { document.querySelectorAll('input[data-clearable], textarea[data-clearable]').forEach(inp => { const b = inp.parentElement.querySelector('.clear-btn'); if (b) b.hidden = !inp.value; }); }
 let ending = false;
 function endSession(msg, reason = 'logout') { if (ending) return; ending = true; logout(reason); lastPlan = null; $('#planResult').innerHTML = ''; showLogin(msg); ending = false; }
 async function showApp() {
@@ -573,7 +623,7 @@ $('#loginForm').onsubmit = async e => {
 // 로그아웃: 확인 창 먼저(확인 = 로그아웃, 취소 = 그대로)
 $('#btnLogout').onclick = () => {
   const d = $('#logoutDialog');
-  const update = () => { $('#logoutMsg').textContent = '이용해 주셔서 감사합니다.\n' + logoutUsage(loginQuota(), usage?.limits); };
+  const update = () => { $('#logoutMsg').textContent = logoutText(); };
   update();
   refreshUsage().then(() => { if (d.open) update(); });
   d.returnValue = 'cancel';
