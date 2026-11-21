@@ -1,6 +1,6 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage, nextLoginText, timesKo } from './role-policy.js?v=0.4.20';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage, nextLoginText, timesKo } from './role-policy.js?v=0.4.21';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes, loginQuota } from './auth.js?v=0.4.20';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes, loginQuota } from './auth.js?v=0.4.21';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
 const openDestination = createDestinationDialog(document, api);
@@ -365,6 +365,15 @@ $('#placeAdd').onclick = async () => {
 // ☆ 저장: 현재 위치(좌표)는 그대로 저장하고, 글자로 적은 출발지는 주소 찾기를 거쳐 저장한다
 $('#placeOnce').onclick = () => { if (!pickedPlace) return; const v = pickedPlace; $('#placeInput').value = ''; setPicked(null); closePostcode(); $('#placesDialog').close(); setOrigin(v); toast(`이번에는 '${v}'에서 출발해요`); };
 
+// ---------- 추천 버튼(오늘의 추천 '이 조건으로 만들기'·기록 '오늘 다시'): 누를 수 있는 버튼으로 보이게 ----------
+// 처음 쓰는 사람을 위한 안내: 추천 버튼을 3번 누르기 전까지 '누르면 바로 만들어 드려요' 문구를 보여 준다
+const ACT_KEY = 'bookwalking.actionTaps';
+const actionHintNeeded = () => { try { return Number(localStorage.getItem(ACT_KEY) || 0) < 3; } catch { return true; } };
+const actionUsed = () => { try { localStorage.setItem(ACT_KEY, String(Number(localStorage.getItem(ACT_KEY) || 0) + 1)); } catch { /* 저장 못 해도 동작에는 영향 없음 */ } };
+/** 같은 묶음에서 누른 버튼은 채우고 나머지는 흐리게 */
+function pickAct(btn, group = btn.parentElement) { actionUsed(); group.querySelectorAll('.act').forEach(x => x.classList.toggle('picked', x === btn)); group.classList.add('used'); group.classList.remove('fresh'); }
+const actBtn = (label, ico = '💬', go = '›') => `<span class="act-ico" aria-hidden="true">${ico}</span><span class="act-label">${esc(label)}</span><span class="act-go" aria-hidden="true">${go}</span>`;
+
 // ---------- 오늘의 북 워킹(하루 한 번 말풍선, 음성은 버튼을 눌렀을 때만) ----------
 let tipData = null, tipAudio = null, tipUrl = null;
 const dailyKey = () => 'bookwalking.dailyAt.' + (state.auth?.user?.id ?? '');
@@ -382,10 +391,11 @@ async function showDailyTip() {
     $('#todayTipVoice').hidden = !(t.voice && t.speechId); $('#todayTipVoice').textContent = '🔊 듣기';
     if (tipUrl) { URL.revokeObjectURL(tipUrl); tipUrl = null; tipAudio = null; }
     tipClosed = false; $('#todayTip').hidden = !document.querySelector('#tab-plan').classList.contains('active');
+    const acts = $('#todayTip .actions'); acts.classList.add('fresh'); acts.classList.remove('used'); $('#todayTipMore').classList.remove('picked'); $('#todayTipHint').hidden = !actionHintNeeded();
   } catch { /* 부가 기능: 실패하면 보이지 않음 */ }
 }
 $('#todayTipClose').onclick = hideTip;
-$('#todayTipMore').onclick = () => { const a = tipData?.action; hideTip(); if (!a) return; setOrigin(a.origin); sel.situation = a.situation; sel.date = 'today'; drawForm(); (skipAskOnce = true, $('#planForm').requestSubmit()); };
+$('#todayTipMore').onclick = () => { if (tokenLocked) { toast(TOKEN_EMPTY_MSG); return; } pickAct($('#todayTipMore')); const a = tipData?.action; hideTip(); if (!a) return; setOrigin(a.origin); sel.situation = a.situation; sel.date = 'today'; drawForm(); (skipAskOnce = true, $('#planForm').requestSubmit()); };
 $('#todayTipVoice').onclick = async () => {
   const b = $('#todayTipVoice');
   if (tipAudio && !tipAudio.paused) { tipAudio.pause(); tipAudio.currentTime = 0; b.textContent = '🔊 듣기'; return; }
@@ -415,10 +425,10 @@ async function loadHistory() {
         <div class="muted small-text">${esc(kst(p.created_at).time)} · ${esc(p.trip_date)} · ${esc(p.emoji ?? '')} ${esc(p.situation_label ?? p.situation ?? '')}</div>
         <b>${esc(p.sigungu ?? '')}</b> <span class="tag ${p.gate}">${esc(p.gate_name ?? p.gate ?? '')} ${p.score ?? ''}</span>
         <div class="small-text">${esc(p.course ?? '동네 산책')}${p.book ? ` · 『${esc(p.book)}』` : ''}${p.has_script ? ' · 🎧' : ''}</div>
-        <div class="acts"><button type="button" class="ghost small" data-view="${p.id}">다시 보기</button><button type="button" class="ghost small" data-again="${p.id}" data-place="${esc(p.sigungu ?? '')}" data-sit="${esc(p.situation ?? '')}" data-comp="${esc(p.companion ?? '')}">오늘 다시</button></div>
+        <div class="acts"><button type="button" class="ghost small" data-view="${p.id}">다시 보기</button><button type="button" class="act small" data-again="${p.id}" data-place="${esc(p.sigungu ?? '')}" data-sit="${esc(p.situation ?? '')}" data-comp="${esc(p.companion ?? '')}">${actBtn('오늘 다시 만들기', '🚶')}</button></div>
       </div></div>`).join('')}</details>`).join('') + '<p class="muted small-text">플랜은 서비스 개선과 운영을 위해 30일간 보관된 뒤 자동으로 지워져요.</p>';
     box.querySelectorAll('[data-view]').forEach(b => b.onclick = async () => { try { const r = await api('/v1/plans/' + b.dataset.view); lastPlan = { id: r.id, plan: r.plan, voice: true, script: r.script ?? null }; go('plan'); renderPlan(lastPlan); } catch (e) { toast(e.message); } });
-    box.querySelectorAll('[data-again]').forEach(b => b.onclick = () => { setOrigin(b.dataset.place); sel.situation = b.dataset.sit || null; sel.companion = ['solo', 'pair', 'family', 'group'].includes(b.dataset.comp) ? b.dataset.comp : null; sel.date = 'today'; go('plan'); drawForm(); (skipAskOnce = true, $('#planForm').requestSubmit()); });
+    box.querySelectorAll('[data-again]').forEach(b => b.onclick = () => { if (tokenLocked) { toast(TOKEN_EMPTY_MSG); return; } pickAct(b, box); setOrigin(b.dataset.place); sel.situation = b.dataset.sit || null; sel.companion = ['solo', 'pair', 'family', 'group'].includes(b.dataset.comp) ? b.dataset.comp : null; sel.date = 'today'; go('plan'); drawForm(); (skipAskOnce = true, $('#planForm').requestSubmit()); });
   } catch (e) { box.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
 }
 $('#btnHistory').onclick = () => go('history');
@@ -479,7 +489,7 @@ function renderTokens() {
   if (tokenLocked && m.value) { m.value = ''; m.dispatchEvent(new Event('input', { bubbles: true })); }
   m.disabled = tokenLocked; m.placeholder = tokenLocked ? '오늘 AI 사용량을 모두 써서 새 북 워킹을 만들 수 없어요' : MSG_PLACEHOLDER;
   $('#planForm').classList.toggle('token-empty', tokenLocked);
-  $('#todayTipMore').disabled = tokenLocked;
+  $('#todayTipMore').classList.toggle('locked', tokenLocked); // 눌러도 만들지 않고 안내만(아래 onclick)
 }
 /** 로그아웃 확인창: 이용 조건(로그인 횟수·이용 시간·자동 로그아웃·하루 AI 사용량)을 계정 한도 값으로 짧게 */
 function logoutText() {

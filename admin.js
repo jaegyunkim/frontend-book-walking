@@ -1,8 +1,8 @@
-import { ROLE_LABEL, policyText, limitsText, DAY_NOTE } from './role-policy.js?v=0.4.20';
+import { ROLE_LABEL, policyText, limitsText, DAY_NOTE } from './role-policy.js?v=0.4.21';
 import { approvalMailto } from './approval-email.js?v=0.1.7';
-import { visitsHtml } from './admin-visits.js?v=0.4.20';
+import { visitsHtml } from './admin-visits.js?v=0.4.21';
 // 북 워킹 관리자 화면(backend-go-fishing/frontend-go-fishing 운영관리와 동일 구성 + 플랜·코스 탭): 계정·세션·사용량·대화 로그·로그인/작업 기록. 관리자 계정으로 로그인한 탭에서만 동작.
-import { state, api, health, startTimer, syncAccount, setOnAuthLost, logout } from './auth.js?v=0.4.20';
+import { state, api, health, startTimer, syncAccount, setOnAuthLost, logout } from './auth.js?v=0.4.21';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const dt = v => v ? new Date(v).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
@@ -143,7 +143,11 @@ const views = {
           lf.oninput = showHint; lf.onchange = showHint; showHint();
           const r = await pending; lf.oninput = null; lf.onchange = null;
           if (r?.error) return note(r.error, true);
-          if (r) { note(`${login} 한도를 저장했어요`); views.users(); }
+          if (r) {
+            note(`${login} 한도를 저장했어요 · 즉시 적용${r.adjustedSessions ? ` (이용 중인 세션 ${r.adjustedSessions}개 시간 변경)` : ''}`);
+            if (String(id) === String(state.auth?.user?.id)) { try { const me = await api('/v1/auth/me'); syncAccount(me); $('#who').textContent = `${me.user.displayName}(${me.user.loginId}) · 세션 ${me.limits.sessionMinutes}분`; } catch { /* 다음 갱신 때 반영 */ } }
+            views.users();
+          }
           return;
         }
         if (b.dataset.a === 'role') {
