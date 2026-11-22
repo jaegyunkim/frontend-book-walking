@@ -42,3 +42,61 @@ test('남은 AI 사용량 표시·소진 잠금·한마디 지우기 버튼', ()
   assert.match(app, /if \(tokenLocked\) \{ toast\(TOKEN_EMPTY_MSG\); return; \}/);
   assert.match(app, /setInterval\(\(\) => \{ if \(state\.auth && document\.visibilityState === 'visible'\) refreshUsage\(\); \}, 60000\)/);
 });
+
+// ---- v0.4.23 Manus 점검 반영 ----
+test('라디오 그룹 방향키: 다음·이전(끝에서 돌기)·Home·End', async () => {
+  const { nextIndex } = await import('../radio-group.js');
+  assert.equal(nextIndex(5, 0, 'ArrowRight'), 1); assert.equal(nextIndex(5, 4, 'ArrowRight'), 0);
+  assert.equal(nextIndex(5, 0, 'ArrowLeft'), 4); assert.equal(nextIndex(5, 2, 'ArrowUp'), 1); assert.equal(nextIndex(5, 2, 'ArrowDown'), 3);
+  assert.equal(nextIndex(5, 3, 'Home'), 0); assert.equal(nextIndex(5, 1, 'End'), 4);
+  assert.equal(nextIndex(5, 1, 'Enter'), null); assert.equal(nextIndex(0, 0, 'ArrowRight'), null);
+});
+test('선택 그룹마다 이름표와 방향키 조작(날짜·상황·누구와·출발지·상황별 책·별점)', () => {
+  const h = read('index.html'), a = read('app.js');
+  assert.match(h, /id="dateChips"[^>]*role="radiogroup" aria-labelledby="dateLabel"/);
+  assert.match(h, /id="situationChips"[^>]*role="radiogroup" aria-label=/);
+  assert.match(h, /id="companionChips"[^>]*role="radiogroup" aria-label=/);
+  assert.match(h, /id="bookSituationChips"[^>]*role="radiogroup" aria-label=/);
+  assert.match(h, /class="star" role="radio" aria-checked="false"/);
+  assert.doesNotMatch(h, /id="placeChips"[^>]*role="radiogroup"/); // 저장·추가 버튼은 라디오 그룹 밖
+  assert.match(a, /class="origin-radios" role="radiogroup" aria-labelledby="originLabel"/);
+  assert.match(a, /bindRadioGroup\(el\); syncRoving\(el\);/);
+  assert.match(a, /bindRadioGroup\(\$\('\.stars'\)\)/);
+});
+test('걷기 지수 근거: 없는 응답(예전 플랜·서버)은 아무것도 그리지 않는다', async () => {
+  const { evidenceHtml } = await import('../evidence.js');
+  for (const v of [undefined, null, {}, 'x', { items: 'x' }, { items: [] }, { items: [{ key: 'mid', provider: '기상청 중기예보', status: 'not-requested' }] }]) assert.equal(evidenceHtml(v), '');
+});
+test('걷기 지수 근거: 출처·기준 시각(한국 시간)·오래된 자료·빠진 자료를 접이식으로, 글자는 이스케이프', async () => {
+  const { evidenceHtml, kstShort, agoText } = await import('../evidence.js');
+  const html = evidenceHtml({ version: 1, basis: '단기예보', checkedAt: '2026-11-23T05:30:00.000Z', missing: ['living'], stale: ['air'], items: [
+    { key: 'short', provider: '기상청 단기예보', role: '기온·강수·바람', status: 'ok', used: true, baseAt: '2026-11-23T02:00:00.000Z', ageMinutes: 210, stale: false, reason: null },
+    { key: 'mid', provider: '기상청 중기예보', status: 'not-requested', used: false, baseAt: null, reason: '중기예보는 3일 뒤부터 반영해요' },
+    { key: 'air', provider: '에어코리아 대기오염정보', status: 'ok', used: true, baseAt: '2026-11-23T00:00:00.000Z', ageMinutes: 330, stale: true, reason: '측정 후 5시간이 지난 자료예요' },
+    { key: 'living', provider: '<b>생활</b>', status: 'error', used: false, baseAt: null, reason: '제공기관 요청 시간 초과' }] });
+  assert.match(html, /^<details class="walk-basis">/);
+  assert.match(html, /오래된 자료 1 · 빠진 자료 1/);
+  assert.match(html, /11\/23 11:00 기준 · 3시간 30분 전/);
+  assert.match(html, /측정 후 5시간이 지난 자료예요/);
+  assert.match(html, /받지 못함/);
+  assert.doesNotMatch(html, /중기예보/); // 날짜 범위상 요청하지 않은 항목은 숨김
+  assert.doesNotMatch(html, /<b>생활<\/b>/); assert.match(html, /&lt;b&gt;생활/);
+  assert.equal(kstShort('bad'), null); assert.equal(agoText(45), '45분 전'); assert.equal(agoText(3000), '2일 전');
+  assert.match(read('app.js'), /\$\{evidenceHtml\(w\.evidence\)\}/);
+});
+test('도움말: 설정 창에서 열고, 보관·위치·한도 문구는 로그인 화면 안내를 그대로 옮겨 쓴다(자리표시자·처리방침 초안 없음)', () => {
+  const h = read('index.html'), a = read('app.js');
+  assert.match(h, /id="btnHelp"/); assert.match(h, /<dialog id="helpDialog"/);
+  for (const id of ['noteKeep', 'noteLocation', 'noteSession', 'loginPolicy']) { assert.match(h, new RegExp(`<li id="${id}">`)); assert.match(h, new RegExp(`data-note="${id}"`)); }
+  assert.match(a, /p\.textContent = document\.getElementById\(p\.dataset\.note\)\?\.textContent/);
+  const faq = h.slice(h.indexOf('<dialog id="helpDialog"'), h.indexOf('</dialog>', h.indexOf('<dialog id="helpDialog"')));
+  assert.doesNotMatch(faq, /\[[^\]]*\]|개인정보 처리방침|확인 필요|30일|직접 지울/); // 보관 기간은 로그인 문구로만
+});
+test('화면마다 h1 하나(오늘은 숨김 제목), 좁은 머리줄은 줄바꿈 대신 둘째 줄로', () => {
+  const h = read('index.html'), c = read('style.css');
+  assert.match(h, /<h1 id="planTitle" class="visually-hidden">오늘의 북 워킹<\/h1>/);
+  for (const t of ['상황별 베스트', '내 책장', '북 워킹 일기', '내 북 워킹 기록', '의견 보내기']) assert.match(h, new RegExp(`<h1>${t}</h1>`));
+  assert.match(c, /\.top \{ flex-wrap: wrap;/); assert.match(c, /\.timer \{ flex: none; white-space: nowrap;/);
+  assert.match(c, /html \{ scroll-padding-top: calc\(var\(--top-h, 64px\) \+ 8px\); scroll-padding-bottom:/);
+  assert.match(c, /@media \(max-width: 374px\) \{ \.diary-form \.row \{ flex-direction: column;/);
+});

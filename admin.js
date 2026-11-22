@@ -1,8 +1,8 @@
-import { ROLE_LABEL, policyText, limitsText, DAY_NOTE } from './role-policy.js?v=0.4.22';
+import { ROLE_LABEL, policyText, limitsText, DAY_NOTE } from './role-policy.js?v=0.4.23';
 import { approvalMailto } from './approval-email.js?v=0.1.7';
-import { visitsHtml } from './admin-visits.js?v=0.4.22';
+import { visitsHtml } from './admin-visits.js?v=0.4.23';
 // 북 워킹 관리자 화면(backend-go-fishing/frontend-go-fishing 운영관리와 동일 구성 + 플랜·코스 탭): 계정·세션·사용량·대화 로그·로그인/작업 기록. 관리자 계정으로 로그인한 탭에서만 동작.
-import { state, api, health, startTimer, syncAccount, setOnAuthLost, logout } from './auth.js?v=0.4.22';
+import { state, api, health, startTimer, syncAccount, setOnAuthLost, logout } from './auth.js?v=0.4.23';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const dt = v => v ? new Date(v).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
@@ -358,9 +358,9 @@ addEventListener('resize', () => { clearTimeout(visitsW); visitsW = setTimeout((
   } catch (e) { if (e.status !== 401) gone(e.message); }
 })();
 
-// 모바일: 메뉴 탭이 오른쪽 끝까지 밀렸으면 흐림 표시를 없애고, 길게 내려가면 '맨 위로' 버튼
-const tabsEl = $('#atabs'); const syncTabsEdge = () => tabsEl.classList.toggle('at-end', tabsEl.scrollLeft + tabsEl.clientWidth >= tabsEl.scrollWidth - 4);
-tabsEl.addEventListener('scroll', syncTabsEdge, { passive: true }); syncTabsEdge();
+// 모바일: 메뉴 탭 양 끝에 가려진 메뉴가 있으면 그쪽을 흐리게(왼쪽 = 맨 앞 '가입 승인' 쪽도), 끝까지 밀리면 흐림 없음. 길게 내려가면 '맨 위로' 버튼
+const tabsEl = $('#atabs'); const syncTabsEdge = () => { tabsEl.classList.toggle('at-end', tabsEl.scrollLeft + tabsEl.clientWidth >= tabsEl.scrollWidth - 4); tabsEl.classList.toggle('at-start', tabsEl.scrollLeft <= 4); };
+tabsEl.addEventListener('scroll', syncTabsEdge, { passive: true }); addEventListener('resize', syncTabsEdge); syncTabsEdge();
 const toTop = document.createElement('button'); toTop.className = 'to-top'; toTop.type = 'button'; toTop.setAttribute('aria-label', '맨 위로'); toTop.textContent = '↑'; toTop.hidden = true;
 toTop.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' }); document.body.appendChild(toTop);
 window.addEventListener('scroll', () => { toTop.hidden = window.scrollY < 600; }, { passive: true });

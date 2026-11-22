@@ -1,8 +1,10 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage, nextLoginText, timesKo } from './role-policy.js?v=0.4.22';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage, nextLoginText, timesKo } from './role-policy.js?v=0.4.23';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes, loginQuota } from './auth.js?v=0.4.22';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes, loginQuota } from './auth.js?v=0.4.23';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
+import { bindRadioGroup, syncRoving } from './radio-group.js?v=0.4.23';
+import { evidenceHtml } from './evidence.js?v=0.4.23';
 const openDestination = createDestinationDialog(document, api);
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -19,6 +21,7 @@ function nextSaturday() { const d = new Date(Date.now() + 9 * 3600000); const ad
 function chips(el, items, current, onPick) {
   el.innerHTML = items.map(i => `<button type="button" class="chip${i.sub ? ' two' : ''}" role="radio" aria-checked="${i.id === current}" data-id="${esc(i.id)}">${i.emoji ? `<span class="chip-emo" aria-hidden="true">${i.emoji}</span>` : ''}${i.sub ? `<span class="chip-main">${esc(i.label)}</span><span class="chip-sub">${esc(i.sub)}</span>` : esc(i.label)}</button>`).join('');
   el.onclick = e => { const b = e.target.closest('.chip'); if (!b) return; const id = b.dataset.id; const next = id === current && el.dataset.toggle ? null : id; current = next; el.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-checked', String(c.dataset.id === next))); onPick(next); };
+  bindRadioGroup(el); syncRoving(el); // 방향키로 옮기며 고르기(Tab 은 그룹에 한 번만 멈춤)
 }
 function drawForm() {
   const sat = nextSaturday();
@@ -133,12 +136,14 @@ function renderPlan({ id, plan: p, voice, script = null }) {
   }
   const nearbyList = (arr, title, note = '') => arr?.length ? `<div class="sec"><h3>${title}<small>${note}</small></h3>${tapHint('이름을 누르면 안내 페이지가, 상세 정보를 누르면 가는 길·이동 비용이 열려요')}<ul class="places">${arr.map(x => `<li><span>${safeUrl(x.url) ? `<a class="ext" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>` : esc(x.name)} <small class="muted">${esc(x.category ?? x.type ?? '')}</small><br>${detailButton(x, x.category ?? x.type ?? title)}</span><span class="d">${x.distanceM != null ? km(x.distanceM) : ''}</span></li>`).join('')}</ul></div>` : '';
   $('#planResult').innerHTML = `
+    <h2 class="visually-hidden">북 워킹 결과</h2>
     <p id="planTokenTag" class="token-tag" hidden></p>
     <div class="metric-strip">
       <div class="metric"><div class="metric-num ${w.gate}">${w.score}</div><div class="metric-label">${esc(w.gateName)}</div></div>
       <div class="metric"><div class="metric-num">${s?.temp ? `${s.temp.min}~${s.temp.max}°` : p.weather.mid?.temp?.min != null ? `${p.weather.mid.temp.min}~${p.weather.mid.temp.max}°` : '-'}</div><div class="metric-label">${esc(p.dateLabel.slice(5))} 기온</div></div>
       <div class="metric"><div class="metric-num">${p.weather.air ? esc(p.weather.air.gradeName) : s?.popMax != null ? s.popMax + '%' : '-'}</div><div class="metric-label">${p.weather.air ? `미세먼지 PM10 ${p.weather.air.pm10 ?? '-'}` : '강수확률 최대'}</div></div>
     </div>
+    ${evidenceHtml(w.evidence)}
     ${p.auto ? `<p class="auto-note">✨ AI 맞춤 추천 · ${p.auto.basis === 'history' ? `최근 북 워킹 ${p.auto.plans}번의 기록에서 자주 고르신 '${esc(p.situation.label)}'${p.auto.companion ? '·' + esc(({ solo: '혼자', pair: '둘이', family: '아이·가족', group: '여럿이' })[p.auto.companion] ?? '') : ''}을(를)` : '오늘 날씨에 맞춰 상황을'} 골랐어요. 출발지는 ${esc(p.place)}.</p>` : ''}
     <div class="card-lines">${p.card.map(l => `<p>${esc(l)}</p>`).join('')}</div>
     ${weatherCard(w, hours)}
@@ -262,6 +267,7 @@ function go(tab) {
   if (tab === 'diary') loadDiary();
   if (tab === 'history') loadHistory();
   if (tab !== 'plan') hideTipView(); else if (tipData && !tipClosed) $('#todayTip').hidden = false;
+  const h1 = document.querySelector(`#tab-${tab} h1`); document.title = (tab === 'plan' || !h1 ? '' : h1.textContent + ' · ') + '북 워킹 · Book Walking'; // 화면마다 제목(h1)과 문서 제목을 맞춘다
   window.scrollTo({ top: 0 });
 }
 document.querySelectorAll('.tabbar button').forEach(b => b.onclick = () => go(b.dataset.tab));
@@ -287,13 +293,17 @@ function renderPlaces() {
   const canSave = !full && (isHere || temp);
   // 위계 v0.4.18: ① 선택 결과(배너) ② 현재 위치(큰 버튼) ③ 자주 걷는 곳(2칸 타일) ④ 저장·추가(글자 버튼)
   const tile = (attrs, label, on, tag = '') => `<button type="button" class="origin-tile" role="radio" aria-checked="${on}" ${attrs}>${ORIGIN_ICON[on ? 'check' : 'pin']}<span>${esc(label)}</span>${tag}</button>`;
-  box.innerHTML =
-    `<button type="button" class="origin-gps" role="radio" aria-checked="${isHere}" data-here${locating ? ' aria-busy="true"' : ''}>${ORIGIN_ICON.gps}<span><b>${locating ? '현재 위치 찾는 중…' : '현재 위치'}</b><small>${isHere ? esc(here.label) : '지금 있는 곳에서 출발'}</small></span>${isHere ? ORIGIN_ICON.check : ''}</button>`
+  const focusedIdx = (() => { const list = [...box.querySelectorAll('[role="radio"]')]; return list.indexOf(document.activeElement); })(); // 다시 그려도 방향키 포커스 유지
+  // 라디오(현재 위치·자주 걷는 곳)만 radiogroup 안에, 저장·추가 버튼은 밖에 둔다
+  box.innerHTML = `<div class="origin-radios" role="radiogroup" aria-labelledby="originLabel">`
+    + `<button type="button" class="origin-gps" role="radio" aria-checked="${isHere}" data-here${locating ? ' aria-busy="true"' : ''}>${ORIGIN_ICON.gps}<span><b>${locating ? '현재 위치 찾는 중…' : '현재 위치'}</b><small>${isHere ? esc(here.label) : '지금 있는 곳에서 출발'}</small></span>${isHere ? ORIGIN_ICON.check : ''}</button>`
     + `<div class="origin-sub"><span>자주 걷는 곳</span><em>${places.length}/5</em></div>`
-    + `<div class="origin-places">${places.map(p => tile(`data-place="${p.id}"`, short(p.label), p.label === cur)).join('')}${temp ? tile('data-temp', short(temp), true, '<em class="origin-tag">이번만</em>') : ''}${!places.length && !temp ? '<p class="origin-empty">자주 걷는 곳을 저장해 두면 한 번에 고를 수 있어요</p>' : ''}</div>`
+    + `<div class="origin-places">${places.map(p => tile(`data-place="${p.id}"`, short(p.label), p.label === cur)).join('')}${temp ? tile('data-temp', short(temp), true, '<em class="origin-tag">이번만</em>') : ''}${!places.length && !temp ? '<p class="origin-empty">자주 걷는 곳을 저장해 두면 한 번에 고를 수 있어요</p>' : ''}</div></div>`
     + `<div class="origin-actions">${canSave ? `<button type="button" class="origin-link" id="placeSaveCur">${ORIGIN_ICON.star}이곳 저장</button>` : ''}<button type="button" class="origin-link" id="placeManage">${full ? ORIGIN_ICON.edit + '자주 걷는 곳 고치기' : ORIGIN_ICON.plus + '주소로 추가'}</button></div>`;
   $('#originNow').innerHTML = cur ? `${ORIGIN_ICON.flag}<span><small>여기서 출발해요</small><b>${esc(cur)}</b></span>` : `${ORIGIN_ICON.flag}<span><small>출발지</small><b>아래에서 골라 주세요</b></span>`;
   $('#originNow').classList.toggle('empty', !cur);
+  const rg = box.querySelector('.origin-radios'); bindRadioGroup(rg); syncRoving(rg);
+  if (focusedIdx >= 0) rg.querySelectorAll('[role="radio"]')[focusedIdx]?.focus();
   box.querySelector('[data-here]').onclick = locateHere;
   box.querySelectorAll('[data-place]').forEach(b => b.onclick = async () => {
     const p = places.find(x => String(x.id) === b.dataset.place); setOrigin(p.label);
@@ -440,8 +450,9 @@ $('#btnHistory').onclick = () => go('history');
 
 // ---------- 의견 보내기(별점 선택 + 500자, 하루 5번) ----------
 let rating = null;
-function setRating(v) { rating = rating === v ? null : v; document.querySelectorAll('.star').forEach(b => { b.classList.toggle('on', !!rating && Number(b.dataset.v) <= rating); b.setAttribute('aria-pressed', String(Number(b.dataset.v) === rating)); }); }
+function setRating(v) { rating = rating === v ? null : v; document.querySelectorAll('.star').forEach(b => { b.classList.toggle('on', !!rating && Number(b.dataset.v) <= rating); b.setAttribute('aria-checked', String(Number(b.dataset.v) === rating)); }); syncRoving($('.stars')); }
 document.querySelectorAll('.star').forEach(b => b.onclick = () => setRating(Number(b.dataset.v)));
+bindRadioGroup($('.stars'));
 $('#opinionText').addEventListener('input', () => { $('#opinionCount').textContent = `${$('#opinionText').value.length}/500`; });
 $('#opinionForm').onsubmit = async e => {
   e.preventDefault(); const text = $('#opinionText').value.trim(), m = $('#opinionMsg');
@@ -531,6 +542,18 @@ $('#btnSettings').onclick = openSettings;
 $('#btnHistory2').onclick = () => { $('#settingsDialog').close(); go('history'); };
 $('#btnPlaces').onclick = () => openPlaces();
 $('#btnPw').onclick = () => { $('#settingsDialog').close(); openPw(false); };
+// 도움말: 보관·위치·한도 문구는 로그인 화면 '이용 안내'를 그대로 옮겨 써서 두 곳이 어긋나지 않게
+function openHelp() {
+  const d = $('#helpDialog');
+  d.querySelectorAll('[data-note]').forEach(p => { p.textContent = document.getElementById(p.dataset.note)?.textContent ?? ''; p.hidden = !p.textContent; });
+  if ($('#settingsDialog').open) $('#settingsDialog').close();
+  d.showModal();
+}
+$('#btnHelp').onclick = openHelp;
+$('#helpClose').onclick = () => $('#helpDialog').close();
+// 고정 머리줄 높이(좁은 화면에서 두 줄이 되면 커짐) → 키보드 포커스·이동이 머리줄 밑에 숨지 않게 scroll-padding 에 쓴다
+const topBar = document.querySelector('.top');
+if (topBar && 'ResizeObserver' in window) new ResizeObserver(() => document.documentElement.style.setProperty('--top-h', topBar.offsetHeight + 'px')).observe(topBar);
 function showNotice(title, msg) { const d = $('#noticeDialog'); if (d.open) return; $('#noticeTitle').textContent = title; $('#noticeMsg').textContent = msg; try { d.showModal(); } catch { /* 로그인 화면 문구로 안내 */ } }
 
 // ---------- 로그인 위치(허용한 경우만 세션당 1회, 서버가 약 100m 단위로 저장·30일 보관) ----------
@@ -560,7 +583,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // ---------- 로그인 ----------
 function showLogin(msg = '') {
   timer?.stop(); timer = null; hideTip(); applyAiLock(null);
-  for (const d of ['#settingsDialog', '#placesDialog', '#pwDialog', '#logoutDialog', '#destinationDialog']) if ($(d).open) $(d).close();
+  for (const d of ['#settingsDialog', '#placesDialog', '#pwDialog', '#logoutDialog', '#destinationDialog', '#helpDialog']) if ($(d).open) $(d).close();
   $('#appView').hidden = true; $('#loginView').hidden = false; $('#loginMsg').textContent = msg; $('#loginMsg').dataset.kind = 'info'; $('#btnAdmin').hidden = true;
   usage = null; renderTokens();
   const id = localStorage.getItem('bookwalking.loginId'); if (id) { $('#loginId').value = id; $('#rememberId').checked = true; }
@@ -581,13 +604,18 @@ let ending = false;
 function endSession(msg, reason = 'logout') { if (ending) return; ending = true; logout(reason); lastPlan = null; $('#planResult').innerHTML = ''; showLogin(msg); ending = false; }
 async function showApp() {
   $('#loginView').hidden = true; $('#appView').hidden = false;
-  if (!situations.length) { try { situations = (await api('/v1/situations', { noAuth: true })).situations; } catch { situations = []; } }
+  // 머리줄(관리자 버튼·남은 시간)을 먼저 채워 머리줄 높이가 나중에 바뀌며 본문이 밀리지 않게(시작 순서만 앞당김, 동작 같음)
+  if (state.auth) {
+    $('#btnAdmin').hidden = state.auth.user?.role !== 'admin';
+    markActive();
+    timer?.stop();
+    timer = startTimer($('#timer'), { onWarn: () => toast('1분 뒤 자동 로그아웃돼요. 필요한 내용은 지금 확인해 주세요.', 8000), onExpire: () => { const min = sessionMinutes(), lq = loginQuota(); endSession(`${min}분 이용 시간이 끝나 로그아웃했어요.`, 'expired'); showSessionEnd(min, lq); } });
+  }
+  // 날짜·누구와는 바로 그리고(상황 칸은 CSS 로 자리 확보), 상황 목록이 오면 다시 그린다 → 늦게 와도 아래 내용이 밀리지 않게
   drawForm();
+  if (!situations.length) { try { situations = (await api('/v1/situations', { noAuth: true })).situations; } catch { situations = []; } drawForm(); }
+  for (const s of ['#situationChips', '#bookSituationChips']) $(s).removeAttribute('aria-busy');
   if (!state.auth) return;
-  $('#btnAdmin').hidden = state.auth.user?.role !== 'admin';
-  markActive();
-  timer?.stop();
-  timer = startTimer($('#timer'), { onWarn: () => toast('1분 뒤 자동 로그아웃돼요. 필요한 내용은 지금 확인해 주세요.', 8000), onExpire: () => { const min = sessionMinutes(), lq = loginQuota(); endSession(`${min}분 이용 시간이 끝나 로그아웃했어요.`, 'expired'); showSessionEnd(min, lq); } });
   if (state.auth.user?.mustChangePassword) openPw(true);
   refreshUsage();
   loadPlaces().then(showDailyTip);

@@ -609,3 +609,73 @@ button.act.act-primary { background: var(--accent); border-color: transparent; c
 button.act.act-primary .act-go { color: #fff; }
 .empty-go { justify-content: center; margin: 4px 0 12px; }
 @media (prefers-reduced-motion: reduce) { .places a.link-btn:active, .links a:active { transform: none; } }
+
+/* ==== v0.4.23 Manus 점검 반영: 좁은 화면 머리줄·고정 버튼 가림·키보드 포커스·대비·제목·레이아웃 이동·걷기 지수 근거·도움말 ==== */
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* 화면 제목(h1): 예전 h2 와 같은 크기 */
+.tab h1, .opinion-form h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; line-height: 1.3; margin: 0 0 12px; }
+/* 머리줄: 글자가 세로로 쪼개지지 않게(줄바꿈 금지·줄지 않음). 한 줄에 다 안 들어가면 버튼 묶음만 둘째 줄 오른쪽으로 */
+.top { flex-wrap: wrap; row-gap: 6px; justify-content: flex-end; }
+.brand { flex: none; margin-right: auto; white-space: nowrap; }
+.brand b { white-space: nowrap; }
+.timer { flex: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.top-right { flex: none; flex-wrap: nowrap; }
+/* 고정 머리줄·하단 메뉴·고정 '북 워킹 만들기' 아래로 키보드 포커스가 숨지 않게 */
+html { scroll-padding-top: calc(var(--top-h, 64px) + 8px); scroll-padding-bottom: calc(var(--tabbar) + 16px + env(safe-area-inset-bottom)); }
+.result { scroll-margin-top: 8px; }
+@media (max-width: 480px) {
+  html { scroll-padding-bottom: calc(var(--tabbar) + 84px + env(safe-area-inset-bottom)); }
+  /* 고정 버튼 둘레를 카드색으로 채워 뒤의 칩 글자가 반쯤 비치지 않게 */
+  .plan-form > button.primary { box-shadow: 0 0 0 6px var(--card), 0 8px 20px rgba(47,107,79,.28); }
+}
+/* 화면 높이가 낮으면(작은 휴대폰·가로 화면) 고정하지 않고 폼 끝에 둔다 */
+@media (max-width: 480px) and (max-height: 560px) {
+  .plan-form > button.primary { position: static; box-shadow: none; }
+  html { scroll-padding-bottom: calc(var(--tabbar) + 16px + env(safe-area-inset-bottom)); }
+}
+/* 키보드 포커스 테두리 통일: 3px 진한 초록(종이·흰 바탕 대비 7.9:1), 초록 바탕 위는 흰색 */
+:root { --focus: #24553F; }
+:where(a[href], button, summary, select, [role="radio"], [tabindex]):focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+button.act:focus-visible, .brand:focus-visible, .clear-btn:focus-visible, .eye-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.tabbar button:focus-visible { outline-offset: -4px; }
+.audio :focus-visible { outline-color: #fff; }
+/* 색 대비(실측 4.5:1 미만만 조정): 시간별 강수확률 글자, 별점, 오디오 카드 설명, 고른 뒤 흐려지는 추천 버튼 */
+.wx-hour .pop, .hour .pop { color: #2A6AA8; } .wx-hour .pop svg { fill: #2A6AA8; }
+.star { color: #8C8676; } .star.on { color: #C27F06; }
+.audio { background: linear-gradient(135deg, #2F6B4F, #3A7D5D); }
+.audio .muted { opacity: 1; }
+.actions.used button.act:not(.picked) { opacity: .8; }
+/* 일기: 좁은 화면(320px)은 날짜·별점을 위아래로(날짜 연도가 잘리지 않게) */
+@media (max-width: 374px) { .diary-form .row { flex-direction: column; align-items: stretch; gap: 14px; } .diary-form .row .field { flex: none; width: 100%; } }
+/* 레이아웃 이동 줄이기: 늦게 오는 상황 목록·일기 통계·책 목록 자리를 미리 잡아 둔다 */
+.chips.sit-grid[aria-busy="true"] { min-height: 328px; }
+#diaryStats:empty { min-height: 84px; }
+#bookList { min-height: 50vh; }
+/* 걷기 지수 근거(접이식) */
+.walk-basis { background: var(--card); border-radius: var(--r); box-shadow: var(--shadow); margin: -4px 0 14px; padding: 0 14px; }
+.walk-basis summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 44px; cursor: pointer; font-size: 14.5px; font-weight: 700; color: var(--accent-text); }
+.walk-basis summary::marker { color: var(--accent); }
+.wb-flag { font-size: 12.5px; font-weight: 700; color: #8A5A00; background: #FDF3E3; border-radius: 999px; padding: 2px 8px; }
+.wb-lead, .wb-note { font-size: 13px; color: var(--mute); margin: 0 0 8px; }
+.wb-note { margin: 8px 0 12px; }
+.eb-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.eb-list li { border-left: 4px solid var(--accent); background: #FAFAF7; border-radius: 8px; padding: 8px 10px; font-size: 13.5px; line-height: 1.45; }
+.eb-list li.old { border-left-color: #B45309; } .eb-list li.miss { border-left-color: #9CA3AF; }
+.eb-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; }
+.eb-head b { color: var(--ink); }
+.eb-state { font-weight: 700; color: var(--accent-text); white-space: nowrap; }
+.eb-list li.old .eb-state { color: #8A5A00; } .eb-list li.miss .eb-state { color: var(--mute); }
+.eb-role, .eb-when, .eb-reason { color: var(--mute); }
+.eb-reason { color: var(--ink2); }
+/* 도움말 */
+#helpDialog { max-width: 520px; max-height: 88vh; max-height: 88dvh; overflow-y: auto; overscroll-behavior: contain; }
+.faq details { border-top: 1px solid var(--hair); }
+.faq details:last-child { border-bottom: 1px solid var(--hair); }
+.faq summary { display: flex; align-items: center; min-height: 48px; padding: 6px 2px; font-weight: 700; color: var(--ink); cursor: pointer; }
+.faq p { margin: 0 0 10px; font-size: 14.5px; color: var(--ink2); line-height: 1.6; }
+/* 접이식 표시(▾): flex 로 바꾼 summary 는 기본 삼각형이 사라지므로 직접 그린다 */
+.faq summary { justify-content: space-between; gap: 10px; }
+.faq summary::-webkit-details-marker, .walk-basis summary::-webkit-details-marker { display: none; }
+.faq summary::after, .wb-title::after { content: '▾'; flex: none; display: inline-block; margin-left: 6px; color: var(--accent); transition: transform .15s; }
+.faq details[open] > summary::after, .walk-basis[open] .wb-title::after { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .faq summary::after, .wb-title::after { transition: none; } }
