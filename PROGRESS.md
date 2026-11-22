@@ -22,7 +22,7 @@
 - 로그인 '이용 안내'의 "책장·걷기 일기·자주 걷는 곳은 직접 지울 때까지 보관돼요"는 지시대로 그대로 재사용했으나, 걷기 일기는 이용자가 지울 수 없어 문구가 오해 소지 있음 → 코디네이터 판단 필요(고치지 않음).
 
 ## 커밋·배포
-- [ ] 커밋 / [ ] macmini 푸시 / [ ] main fast-forward / [ ] 운영 사본 pull / [ ] Pages ?v=0.4.23 확인
+- [x] 커밋 8462474 / [x] macmini 푸시 / [x] main fast-forward(780f5c1..8462474) / [x] 운영 사본(~/dev/frontend-book-walking) pull --ff-only / [x] Pages: index app.js?v=0.4.23, evidence.js 응답, sw.js 캐시 v52 확인
 
 ---
 
