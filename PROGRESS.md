@@ -1,4 +1,11 @@
-# PROGRESS · Manus 점검 보고서 반영 (task_e9109996f3cd, v0.4.23)
+# PROGRESS · 가입 신청 화면 안내 문구 2개 제거 (task_a98622d76f57, v0.4.24)
+
+오너 지시로 register.html '북 워킹 이용 신청'에서 두 문단 제거: ① 베타 테스트 서비스·30일 이내 삭제 안내(.beta-note) ② 베타 테스터 한도 안내(#signupPolicy). register.js 의 한도 채움 코드(role-policy 가져오기·/healthz 호출)도 함께 제거. role-policy.js 값 자체는 다른 화면이 쓰므로 그대로. 입력칸·신청 버튼·돌아가기 링크 유지. 버전 0.4.24, sw 캐시 v53.
+다른 화면 잔존 문구: app.js 로그인 '이용 안내'(#loginPolicy)·로그아웃 확인창·도움말(FAQ)이 policyText/DAY_NOTE 로 같은 한도 문구 사용, admin.js 권한 안내(policyGuide·'베타 테스터: 한 기기에서만 로그인…'). 수정하지 않음.
+
+---
+
+# (이전) PROGRESS · Manus 점검 보고서 반영 (task_e9109996f3cd, v0.4.23)
 
 보고서: ~/Downloads/북워킹_마누스/북워킹_서비스_리포트/ 01·03·05(+02 우선순위 1). 백엔드 짝: v0.1.25 `walk.evidence`(배포 완료 통보 받음).
 검증 도구(저장소 밖): 가짜 API(node, 127.0.0.1:8899) + python3 http.server 8181 + 헤드리스 Chrome(CDP). 스크린샷 /private/tmp/bw-manus-check/{before,final,noevidence}. 운영 API 에 쓰기 없음.

@@ -43,7 +43,7 @@ test('남은 AI 사용량 표시·소진 잠금·한마디 지우기 버튼', ()
   assert.match(app, /setInterval\(\(\) => \{ if \(state\.auth && document\.visibilityState === 'visible'\) refreshUsage\(\); \}, 60000\)/);
 });
 
-// ---- v0.4.23 Manus 점검 반영 ----
+// ---- v0.4.24 Manus 점검 반영 ----
 test('라디오 그룹 방향키: 다음·이전(끝에서 돌기)·Home·End', async () => {
   const { nextIndex } = await import('../radio-group.js');
   assert.equal(nextIndex(5, 0, 'ArrowRight'), 1); assert.equal(nextIndex(5, 4, 'ArrowRight'), 0);
