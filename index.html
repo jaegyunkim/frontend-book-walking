@@ -11,13 +11,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=0.4.26">
+  <link rel="stylesheet" href="style.css?v=0.4.27">
 </head>
 <body>
   <!-- 로그인 -->
   <section id="loginView" class="login-view" hidden>
     <div class="login-card">
-      <img class="login-hero" src="assets/login-hero.svg?v=0.4.26" alt="" width="420" height="150">
+      <img class="login-hero" src="assets/login-hero.svg?v=0.4.27" alt="" width="420" height="150">
       <p class="eyebrow">BOOK WALKING · 걷기와 책</p>
       <h1 class="login-title">걷고, 읽고,<br><em>쉬어 가요</em></h1>
       <form id="loginForm" autocomplete="on">
@@ -68,6 +68,7 @@
   </dialog>
 
   <dialog id="logoutDialog"><form method="dialog"><h2>로그아웃하시겠어요?</h2><p id="logoutMsg" class="pre"></p><div class="row end"><button value="cancel" class="ghost">취소</button><button value="ok" class="primary">확인</button></div></form></dialog>
+  <dialog id="diaryDelDialog" aria-labelledby="diaryDelTitle"><form method="dialog"><h2 id="diaryDelTitle">일기를 삭제할까요?</h2><p id="diaryDelMsg" class="pre"></p><div class="row end"><button value="cancel" class="ghost">취소</button><button value="ok" class="primary" id="diaryDelOk">삭제</button></div></form></dialog>
   <dialog id="askDialog" aria-labelledby="askTitle">
     <h2 id="askTitle"></h2>
     <p id="askMsg" class="ask-msg"></p>
@@ -97,6 +98,7 @@
       <details><summary>이용 시간이나 횟수에 제한이 있나요?</summary><p>네. 한도는 계정 역할과 계정마다 다르고, 로그인 횟수는 최근 24시간 기준으로 세요. 내 계정의 한도와 남은 사용량은 <b>계정 설정</b>에서 볼 수 있어요.</p><p data-note="loginPolicy"></p><p data-note="noteSession"></p></details>
       <details><summary>어떤 정보가 얼마나 보관되나요?</summary><p data-note="noteKeep"></p><p data-note="noteLocation"></p></details>
       <details><summary>추천이 마음에 들지 않으면요?</summary><p>출발지·날짜·상황을 바꾸거나 한마디에 원하는 분위기를 더 적어 다시 만들어 보세요. 다시 만들 때도 AI 사용량이 줄어요.</p></details>
+      <details><summary>걷기 일기를 지울 수 있나요?</summary><p>네. 아래 메뉴의 <b>일기</b>에서 지우고 싶은 기록의 <b>삭제</b>를 누르면 돼요. 삭제하면 되돌릴 수 없어요.</p></details>
       <details><summary>의견은 어디에 남기나요?</summary><p>아래 메뉴의 <b>의견</b>에서 보낼 수 있어요. 하루 5번까지 보낼 수 있어요.</p></details>
     </div>
   </dialog>
@@ -211,9 +213,9 @@
       <button data-tab="opinion" type="button"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 18l-1 3 4-2c1.2.5 2.6.8 4 .8 5 0 8-3.4 8-7.4S17 5 12 5 4 8.4 4 12.4c0 2.2 1 4.1 2.6 5.4"/></svg></span>의견</button>
     </nav>
   </div>
-  <script src="config.js?v=0.4.26"></script>
-  <script src="telemetry.js?v=0.4.26"></script>
-  <script src="app.js?v=0.4.26" type="module"></script>
-  <script src="visit.js?v=0.4.26" type="module"></script>
+  <script src="config.js?v=0.4.27"></script>
+  <script src="telemetry.js?v=0.4.27"></script>
+  <script src="app.js?v=0.4.27" type="module"></script>
+  <script src="visit.js?v=0.4.27" type="module"></script>
 </body>
 </html>

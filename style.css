@@ -316,6 +316,10 @@ details.sec summary { font-weight: 700; min-height: 32px; cursor: pointer; }
 #diaryStats .metric:first-child .metric-num { width: auto; height: auto; border: 0; display: block; font-size: 26px; }
 .diary-list li { background: var(--card); border-radius: var(--r); border-top: 0; box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 10px; }
 .diary-list .when { font-family: var(--sans); }
+.diary-list .diary-acts { display: flex; justify-content: flex-end; margin-top: 8px; }
+.diary-list .diary-acts .ghost.small { min-height: 40px; padding: 6px 14px; display: inline-flex; align-items: center; justify-content: center; }
+.diary-list .diary-acts button:disabled { opacity: .6; }
+#diaryDelDialog .row.end button { min-height: 44px; }
 .empty { border-top: 0; background: var(--card); border-radius: var(--r); padding: 22px 16px; text-align: center; }
 .history .hist-day { background: var(--card); border-radius: var(--r); border-top: 0; box-shadow: var(--shadow); padding: 4px 14px; margin-bottom: 10px; }
 .filters select { border-radius: 10px; min-height: 40px; }

@@ -1,10 +1,11 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage, nextLoginText, timesKo } from './role-policy.js?v=0.4.26';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage, nextLoginText, timesKo } from './role-policy.js?v=0.4.27';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes, loginQuota } from './auth.js?v=0.4.26';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes, loginQuota } from './auth.js?v=0.4.27';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
-import { bindRadioGroup, syncRoving } from './radio-group.js?v=0.4.26';
-import { evidenceHtml } from './evidence.js?v=0.4.26';
+import { bindRadioGroup, syncRoving } from './radio-group.js?v=0.4.27';
+import { evidenceHtml } from './evidence.js?v=0.4.27';
+import { deleteButton, confirmText as deleteConfirmText, DONE_MSG as DELETE_DONE, failMsg as deleteFailMsg } from './diary-delete.js?v=0.4.27';
 const openDestination = createDestinationDialog(document, api);
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -244,8 +245,25 @@ async function loadDiary() {
   try {
     const r = await api('/v1/me/walks');
     $('#diaryStats').innerHTML = `<div class="metric"><div class="metric-num">${r.stats.walks}</div><div class="metric-label">북 워킹 횟수</div></div><div class="metric"><div class="metric-num">${r.stats.courses}</div><div class="metric-label">걸은 코스</div></div><div class="metric"><div class="metric-num">${r.stats.books}</div><div class="metric-label">함께한 책</div></div>`;
-    $('#diaryList').innerHTML = r.walks.map(w => `<li><div class="when">${esc(String(w.walkedOn).slice(0, 10))} ${w.rating ? '★'.repeat(w.rating) : ''}</div><b>${esc(w.courseName ?? '코스 없음')}</b>${w.bookTitle ? ` · 『${esc(w.bookTitle)}』` : ''}${w.note ? `<p>${esc(w.note)}</p>` : ''}</li>`).join('') || '<li class="empty">첫 북 워킹을 기록해 보세요.</li>';
+    walkRows = new Map(r.walks.map(w => [String(w.id), w]));
+    $('#diaryList').innerHTML = r.walks.map(w => `<li><div class="when">${esc(String(w.walkedOn).slice(0, 10))} ${w.rating ? '★'.repeat(w.rating) : ''}</div><b>${esc(w.courseName ?? '코스 없음')}</b>${w.bookTitle ? ` · 『${esc(w.bookTitle)}』` : ''}${w.note ? `<p>${esc(w.note)}</p>` : ''}${deleteButton(w)}</li>`).join('') || '<li class="empty">첫 북 워킹을 기록해 보세요.</li>';
+    $('#diaryList').querySelectorAll('[data-walk-del]').forEach(b => b.onclick = () => askDeleteWalk(b));
   } catch (e) { $('#diaryList').innerHTML = `<li class="msg">${esc(e.message)}</li>`; }
+}
+// 일기 삭제: 확인 창(확인 = 삭제, 취소·Esc = 그대로) → DELETE → 목록·누적 통계 다시 불러오기
+let walkRows = new Map();
+function askDeleteWalk(btn) {
+  const w = walkRows.get(btn.dataset.walkDel); if (!w) return;
+  const d = $('#diaryDelDialog');
+  $('#diaryDelMsg').textContent = deleteConfirmText(w);
+  d.returnValue = 'cancel';
+  d.onclose = async () => {
+    if (d.returnValue !== 'ok') { btn.focus(); return; }
+    btn.disabled = true; btn.setAttribute('aria-busy', 'true');
+    try { await api('/v1/me/walks/' + encodeURIComponent(w.id), { method: 'DELETE' }); toast(DELETE_DONE); await loadDiary(); $('#diaryList').querySelector('[data-walk-del]')?.focus(); }
+    catch (e) { toast(deleteFailMsg(e)); btn.disabled = false; btn.removeAttribute('aria-busy'); }
+  };
+  d.showModal();
 }
 $('#diaryForm').onsubmit = async e => {
   e.preventDefault();
@@ -583,7 +601,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // ---------- 로그인 ----------
 function showLogin(msg = '') {
   timer?.stop(); timer = null; hideTip(); applyAiLock(null);
-  for (const d of ['#settingsDialog', '#placesDialog', '#pwDialog', '#logoutDialog', '#destinationDialog', '#helpDialog']) if ($(d).open) $(d).close();
+  for (const d of ['#settingsDialog', '#placesDialog', '#pwDialog', '#logoutDialog', '#diaryDelDialog', '#destinationDialog', '#helpDialog']) if ($(d).open) $(d).close();
   $('#appView').hidden = true; $('#loginView').hidden = false; $('#loginMsg').textContent = msg; $('#loginMsg').dataset.kind = 'info'; $('#btnAdmin').hidden = true;
   usage = null; renderTokens();
   const id = localStorage.getItem('bookwalking.loginId'); if (id) { $('#loginId').value = id; $('#rememberId').checked = true; }

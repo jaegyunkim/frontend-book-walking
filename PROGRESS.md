@@ -1,3 +1,14 @@
+# PROGRESS · 걷기 일기 삭제 버튼 (task_d24ef0e5aff0, v0.4.27)
+
+일기 화면 각 기록에 '삭제' 버튼(aria-label '2026-11-20 해파랑길 2코스 일기 삭제', 사용자 이름 없음). 누르면 확인 창(#diaryDelDialog, 로그아웃 확인 창과 같은 form method=dialog 패턴 — 취소·Esc 는 호출 없이 닫히고 포커스 복귀) "날짜 · 코스\n이 일기를 삭제할까요? 삭제하면 되돌릴 수 없어요." → `DELETE /v1/me/walks/:id`(책장 삭제와 같은 형태; 백엔드 PROGRESS 에 API 형태가 아직 없어 이 형태로 가정 — 달라지면 app.js askDeleteWalk 한 줄만 고치면 됨) → 진행 중 버튼 비활성·aria-busy → 성공 '일기를 삭제했어요' + 목록·누적 통계 다시 불러오기, 실패 시 서버 메시지(없으면 쉬운 한국어) 알림·버튼 복구.
+「내 기록」 화면은 걷기 일기가 아니라 최근 30일 플랜 기록이라 삭제 버튼 없음(일기 목록은 일기 화면 한 곳뿐).
+안내 문구 점검: index.html 로그인 '이용 안내'(#noteKeep) "책장·걷기 일기·자주 걷는 곳은 직접 지울 때까지 보관돼요" — 삭제 기능이 생겨 사실과 맞음, 변경 없음. 도움말 '어떤 정보가 얼마나 보관되나요?'는 같은 문구를 복사해 쓰므로 동일. 설정 창에는 해당 문구 없음. 도움말에 '걷기 일기를 지울 수 있나요?' 한 줄 추가(기존 details 구조 그대로). 보관 기간·개인정보 새 주장 없음.
+파일: diary-delete.js(신규), app.js, index.html, style.css, test/diary-delete.test.mjs(신규), test/admin-resend.test.mjs(버전 기대값), 버전 0.4.27(package.json·?v=·sw 캐시 v56).
+시험: npm test 68/68. 가짜 API+헤드리스 Chrome 320·375·768·1280: 버튼 3개·가로 넘침 없음·버튼이 카드 안(높이 40px), 긴 코스 이름(320)에도 안 깨짐, 확인 창 문구·Esc(DELETE 0), 실패(500) 알림·목록 유지, 진행 중 비활성, 성공 시 1건 사라지고 통계 갱신. 실제 삭제·운영 호출 없음.
+- [ ] 푸시·배포: 백엔드 v0.1.27 운영 배포 뒤 코디네이터 승인 필요
+
+---
+
 # PROGRESS · 가입 승인 탭 승인 완료 카드 '임시 비밀번호 생성' (task_0d0ee9fdee32, v0.4.26)
 
 「신청 승인」 탭의 승인 완료(approved) 카드에만 '임시 비밀번호 생성' 버튼(aria-label '○○님의 임시 비밀번호 생성', 대기·거절 카드엔 없음, 기존 승인·거절·승인 회수 그대로). 사용자 목록 버튼과 같은 공용 함수 runResend(admin.js)를 써서 확인 창 → `POST /v1/admin/users/:id/resend-temp-password` → showSecret(승인 때와 같은 팝업, '메일 보내기'는 클릭 때만 approvalMailto(login_id, 비밀번호) 로 mailto 생성, approval-email.js 제목·본문 그대로) → 마스킹 주소 알림. 오류는 v0.4.25 resendFail(429 retryAfterSeconds 포함) 재사용.

@@ -62,11 +62,11 @@ test('admin.js 연결: 확인 창 먼저·중복 클릭 방지·알림·기존 �
 
 test('좁은 화면 카드에서 긴 버튼 문구가 줄바꿈된다', () => assert.match(read('admin.css'), /\.acts button\[data-a="resend"\], \.acts button\[data-resend-reg\] \{ max-width: 100%; white-space: normal;/));
 
-test('버전 0.4.26 가 package·admin·sw 에 일관', () => {
-  const v = JSON.parse(read('package.json')).version; assert.equal(v, '0.4.26');
+test('버전 0.4.27 가 package·admin·sw 에 일관', () => {
+  const v = JSON.parse(read('package.json')).version; assert.equal(v, '0.4.27');
   const used = [...read('admin.html').matchAll(/\?v=([\d.]+)/g)].map(m => m[1]); assert.ok(used.every(x => x === v));
-  assert.match(read('admin.js'), /admin-resend\.js\?v=0\.4\.26/);
-  assert.match(read('sw.js'), /shell-v55/);
+  assert.match(read('admin.js'), /admin-resend\.js\?v=0\.4\.27/);
+  assert.match(read('sw.js'), /shell-v56/);
 });
 
 // ---- v0.4.26 가입 승인 탭: 승인 완료 카드의 '임시 비밀번호 생성' ----
