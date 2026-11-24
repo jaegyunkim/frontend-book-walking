@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { canResend, resendButton, resendConfirmHtml, resendDone, resendFail, resendLabel, maskedOf } from '../admin-resend.js';
+import { canResend, resendConfirmHtml, resendDone, resendFail, resendLabel, maskedOf } from '../admin-resend.js';
 const read = f => fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
 const active = { id: 7, loginId: 'demo@example.com', displayName: '다람쥐', status: 'active' };
@@ -13,13 +13,10 @@ test('임시 비밀번호 메일 다시 보내기: 사용 중(활성) 계정에�
   assert.equal(canResend({ ...active, status: 'pending' }), false);
   assert.equal(canResend({ ...active, status: 'rejected' }), false);
   assert.equal(canResend(null), false);
-  assert.match(resendButton(active), /^<button type="button" data-a="resend" aria-label="다람쥐님에게 임시 비밀번호 메일 다시 보내기">임시 비밀번호 메일 다시 보내기<\/button>$/);
-  assert.equal(resendButton(off), '');
 });
 
 test('버튼 aria-label 에 사용자 이름(없으면 아이디), 이름의 HTML 은 이스케이프', () => {
   assert.equal(resendLabel({ ...active, displayName: '' }), 'demo@example.com님에게 임시 비밀번호 메일 다시 보내기');
-  assert.doesNotMatch(resendButton({ ...active, displayName: '"><img src=x>' }), /<img/);
   assert.doesNotMatch(resendConfirmHtml({ ...active, displayName: '<b>x</b>' }), /<b>x/);
 });
 
@@ -49,7 +46,7 @@ test('실패: 429 는 잠시 후 다시, 나머지도 쉬운 한국어', () => {
 
 test('admin.js 연결: 확인 창 먼저·중복 클릭 방지·알림·기존 흐름 유지', () => {
   const a = read('admin.js');
-  assert.match(a, /\$\{resendButton\(u\)\}/);
+  assert.doesNotMatch(a, /\$\{resendButton\(u\)\}/); // v0.4.28: 사용자 목록에서 버튼 제거
   assert.match(a, /await dialog\(resendConfirmHtml\(u\), \(\) => true\)/);
   assert.match(a, /\/v1\/admin\/users\/\$\{id\}\/resend-temp-password`, \{ method: 'POST'/);
   assert.match(a, /showSecret\(`\$\{u\.loginId\} 새 임시 비밀번호`, out\.tempPassword, u\.loginId\)/); // 승인 흐름처럼 창 + 메일 보내기(mailto)
@@ -60,13 +57,13 @@ test('admin.js 연결: 확인 창 먼저·중복 클릭 방지·알림·기존 �
   assert.match(read('admin.html'), /id="msg" class="toast" role="status" aria-live="polite"/);
 });
 
-test('좁은 화면 카드에서 긴 버튼 문구가 줄바꿈된다', () => assert.match(read('admin.css'), /\.acts button\[data-a="resend"\], \.acts button\[data-resend-reg\] \{ max-width: 100%; white-space: normal;/));
+test('좁은 화면 카드에서 긴 버튼 문구가 줄바꿈된다', () => assert.match(read('admin.css'), /\.acts button\[data-resend-reg\] \{ max-width: 100%; white-space: normal;/));
 
-test('버전 0.4.27 가 package·admin·sw 에 일관', () => {
-  const v = JSON.parse(read('package.json')).version; assert.equal(v, '0.4.27');
+test('버전 0.4.28 가 package·admin·sw 에 일관', () => {
+  const v = JSON.parse(read('package.json')).version; assert.equal(v, '0.4.28');
   const used = [...read('admin.html').matchAll(/\?v=([\d.]+)/g)].map(m => m[1]); assert.ok(used.every(x => x === v));
-  assert.match(read('admin.js'), /admin-resend\.js\?v=0\.4\.27/);
-  assert.match(read('sw.js'), /shell-v56/);
+  assert.match(read('admin.js'), /admin-resend\.js\?v=0.4.28/);
+  assert.match(read('sw.js'), /shell-v57/);
 });
 
 // ---- v0.4.26 가입 승인 탭: 승인 완료 카드의 '임시 비밀번호 생성' ----
@@ -92,7 +89,8 @@ test('admin.js 승인 카드 연결: 공용 runResend·기존 승인 회수/승�
   assert.match(a, /async function runResend\(b, u, getId\)/);
   assert.match(a, /dialog\(resendConfirmHtml\(u\), \(\) => true\)/);
   assert.match(a, /showSecret\(`\$\{u\.loginId\} 새 임시 비밀번호`, out\.tempPassword, u\.loginId\)/); // showSecret 이 approvalMailto(loginId, 비밀번호) 를 클릭 때만 만든다
-  assert.match(a, /await runResend\(b, u, \(\) => id\)/); // 사용자 목록 버튼도 같은 함수
+  assert.doesNotMatch(a, /await runResend\(b, u, \(\) => id\)/); // 사용자 목록 버튼은 제거됨(승인 카드만 사용)
+  assert.match(a, /data-resend-reg\]'\)\.forEach\(b=>b\.onclick=\(\)=>runResend\(/);
   assert.match(a, /data-review="approve"/); assert.match(a, /\[data-revoke-reg\]'\)\.forEach/);
   assert.match(read('approval-email.js'), /export function approvalMailto\(loginId, temporaryPassword\)/); // 제목·본문은 그대로
   assert.match(read('admin.css'), /\[data-resend-reg\] \{ max-width: 100%; white-space: normal;/);

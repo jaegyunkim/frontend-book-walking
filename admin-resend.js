@@ -9,10 +9,6 @@ export const resendName = u => String(u?.displayName || u?.loginId || '이 사�
 
 export const resendLabel = u => `${resendName(u)}님에게 임시 비밀번호 메일 다시 보내기`;
 
-export function resendButton(u) {
-  return canResend(u) ? `<button type="button" data-a="resend" aria-label="${esc(resendLabel(u))}">임시 비밀번호 메일 다시 보내기</button>` : '';
-}
-
 // 가입 승인 탭의 '승인 완료' 카드 버튼(신청 행 r: login_id·display_name·status). 승인 완료 카드에만.
 export const regResendLabel = r => `${resendName({ displayName: r?.display_name, loginId: r?.login_id })}님의 임시 비밀번호 생성`;
 export function regResendButton(r) {

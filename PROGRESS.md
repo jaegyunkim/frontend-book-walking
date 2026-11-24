@@ -1,3 +1,13 @@
+# PROGRESS · 관리자 사용자 목록 '임시 비밀번호 메일 다시 보내기' 버튼 제거 (task_1da0d9688afd, v0.4.28)
+
+오너 지시: 「사용자」 탭 작업 줄에서 '임시 비밀번호 메일 다시 보내기' 버튼만 제거. 한도·권한 변경·비번 초기화·(잠금 해제)·중지/재개·대화는 그대로.
+정리: admin.js(버튼 렌더·data-a="resend" 분기·resendButton import 제거), admin-resend.js(resendButton 제거; 승인 카드가 쓰는 regResendButton·findAccountId·resendConfirmHtml·resendDone·resendFail·runResend 유지), admin.css(data-a="resend" 선택자 → data-resend-reg 만 남김), 테스트 수정, 버전 0.4.28(package.json·?v=·sw 캐시 v57).
+유지: 가입 승인 탭 승인 완료 카드 '임시 비밀번호 생성'(v0.4.26), 백엔드 API 변경 없음.
+시험: npm test 68/68.
+- [ ] 320·375px 화면 확인, 푸시·배포(macmini → main → 운영 사본 pull → Pages ?v=0.4.28)
+
+---
+
 # PROGRESS · 걷기 일기 삭제 버튼 (task_d24ef0e5aff0, v0.4.27)
 
 일기 화면 각 기록에 '삭제' 버튼(aria-label '2026-11-20 해파랑길 2코스 일기 삭제', 사용자 이름 없음). 누르면 확인 창(#diaryDelDialog, 로그아웃 확인 창과 같은 form method=dialog 패턴 — 취소·Esc 는 호출 없이 닫히고 포커스 복귀) "날짜 · 코스\n이 일기를 삭제할까요? 삭제하면 되돌릴 수 없어요." → `DELETE /v1/me/walks/:id`(책장 삭제와 같은 형태; 백엔드 PROGRESS 에 API 형태가 아직 없어 이 형태로 가정 — 달라지면 app.js askDeleteWalk 한 줄만 고치면 됨) → 진행 중 버튼 비활성·aria-busy → 성공 '일기를 삭제했어요' + 목록·누적 통계 다시 불러오기, 실패 시 서버 메시지(없으면 쉬운 한국어) 알림·버튼 복구.
