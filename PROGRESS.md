@@ -1,3 +1,13 @@
+# PROGRESS · 관리자 '임시 비밀번호 메일 다시 보내기' (task_19ab5e834bae, v0.4.25)
+
+사용자 목록의 사용 중(status active) 계정마다 버튼(aria-label '○○님에게 임시 비밀번호 메일 다시 보내기'). 누르면 확인 창(기존 dialog) → `POST /v1/admin/users/:id/resend-temp-password` → 서버는 메일을 보내지 않으므로(오너 결정) 응답의 tempPassword 를 기존 showSecret 창으로 한 번 보여 주고 '메일 보내기'(클릭 때만 approvalMailto 생성)로 메일 앱을 연다. 완료 알림에는 마스킹 주소(maskedEmail)만, 비밀번호는 알림·저장소에 안 남김. 429·기타 오류는 쉬운 한국어. 진행 중 버튼 비활성·aria-busy.
+파일: admin-resend.js(신규, 문구·조건), admin.js, admin.html(알림 aria-live), admin.css, test/admin-resend.test.mjs, 버전 0.4.25·sw 캐시 v54.
+시험: npm test 59/59. 가짜 API + 헤드리스 Chrome(320·375·768·1280): 정지 계정엔 버튼 없음, 가로 넘침 없음, 확인 창 문구·포커스 이동·Esc 닫힘(호출 0), 429·500 알림, 성공 시 비밀번호 창+마스킹 알림. 실제 전송·운영 호출 없음.
+Retry-After 는 auth.js api() 가 헤더를 넘기지 않아 읽지 않고 '1분에 한 번, 하루 5번' 일반 안내.
+- [ ] 푸시·배포(백엔드 v0.1.26 배포 뒤 코디네이터 승인 필요)
+
+---
+
 # PROGRESS · 가입 신청 화면 안내 문구 2개 제거 (task_a98622d76f57, v0.4.24)
 
 오너 지시로 register.html '북 워킹 이용 신청'에서 두 문단 제거: ① 베타 테스트 서비스·30일 이내 삭제 안내(.beta-note) ② 베타 테스터 한도 안내(#signupPolicy). register.js 의 한도 채움 코드(role-policy 가져오기·/healthz 호출)도 함께 제거. role-policy.js 값 자체는 다른 화면이 쓰므로 그대로. 입력칸·신청 버튼·돌아가기 링크 유지. 버전 0.4.24, sw 캐시 v53.

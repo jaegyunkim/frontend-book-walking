@@ -8,8 +8,8 @@
   <title>북 워킹 · 관리자</title>
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin-base.css?v=0.4.24">
-  <link rel="stylesheet" href="admin.css?v=0.4.24">
+  <link rel="stylesheet" href="admin-base.css?v=0.4.25">
+  <link rel="stylesheet" href="admin.css?v=0.4.25">
 </head>
 <body>
   <div class="admin">
@@ -21,11 +21,11 @@
       <button data-v="requests">가입 승인</button><button data-v="model">AI 연결</button><button data-v="users" class="active">사용자</button><button data-v="sessions">세션</button><button data-v="usage">사용량</button><button data-v="visits">접속현황</button>
       <button data-v="chats">대화 로그</button><button data-v="logins">로그인 기록</button><button data-v="reports">리포트</button><button data-v="plans">플랜·코스</button><button data-v="opinions">의견 보내기</button><button data-v="actions">작업 기록</button>
     </nav>
-    <div id="msg" class="toast" hidden></div>
+    <div id="msg" class="toast" role="status" aria-live="polite" hidden></div>
     <main id="view" class="aview"><p class="sub">불러오는 중…</p></main>
   </div>
   <dialog id="dlg"><form method="dialog" class="settings" id="dlgForm"></form></dialog>
-  <script src="config.js?v=0.4.24"></script><script src="telemetry.js?v=0.4.24"></script>
-  <script src="admin.js?v=0.4.24" type="module"></script>
+  <script src="config.js?v=0.4.25"></script><script src="telemetry.js?v=0.4.25"></script>
+  <script src="admin.js?v=0.4.25" type="module"></script>
 </body>
 </html>
