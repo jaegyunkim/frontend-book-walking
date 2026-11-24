@@ -22,10 +22,16 @@ export const resendDone = (u, r) => { const m = maskedOf(r); return `${resendNam
 
 export function resendFail(e) {
   const s = e?.status;
-  if (s === 429) return '같은 계정에는 자주 보낼 수 없어요(1분에 한 번, 하루 5번). 잠시 후 다시 시도해 주세요.';
+  const lost = ' 비밀번호를 확인하지 못했다면 1분 뒤에 다시 발급해 주세요.';
+  if (s === 429) {
+    const t = Number(e.retryAfterSeconds);
+    if (e.reason === 'day') return '오늘은 이 계정에 더 보낼 수 없어요(하루 5번). 내일 다시 시도해 주세요.';
+    return `같은 계정에는 1분에 한 번만 보낼 수 있어요. ${Number.isFinite(t) && t > 0 ? `${Math.ceil(t)}초 뒤에` : '잠시 후'} 다시 시도해 주세요.`;
+  }
   if (s === 404) return '계정을 찾을 수 없어요. 목록을 새로 고친 뒤 다시 확인해 주세요.';
-  if (s === 400 || s === 409 || s === 422) return '지금은 이 계정에 메일을 보낼 수 없어요. 사용 중인 계정인지 확인해 주세요.';
+  if (s === 409) return '지금은 이 계정에 보낼 수 없어요. 사용 중인 계정인지 확인해 주세요.';
+  if (s === 400 || s === 422) return '요청을 처리하지 못했어요. 목록을 새로 고친 뒤 다시 시도해 주세요.';
   if (s === 401 || s === 403) return '권한이 없거나 로그인이 만료됐어요. 다시 로그인해 주세요.';
-  if (s === 0) return '네트워크 연결을 확인한 뒤 다시 시도해 주세요.';
-  return '메일을 보내지 못했어요. 잠시 후 다시 시도해 주세요. 계속되면 서버 상태를 확인해 주세요.';
+  if (s === 0) return '네트워크 연결을 확인한 뒤 다시 시도해 주세요.' + lost;
+  return '새 임시 비밀번호를 만들지 못했어요. 잠시 후 다시 시도해 주세요.' + lost;
 }

@@ -38,10 +38,12 @@ test('성공: API 가 준 마스킹 주소를 그대로 표시, 없으면 주소
 
 test('실패: 429 는 잠시 후 다시, 나머지도 쉬운 한국어', () => {
   assert.match(resendFail({ status: 429 }), /잠시 후 다시 시도/);
+  assert.match(resendFail({ status: 429, retryAfterSeconds: 42.2, reason: 'minute' }), /43초 뒤에 다시 시도/);
+  assert.match(resendFail({ status: 429, reason: 'day' }), /하루 5번/);
   assert.match(resendFail({ status: 404 }), /계정을 찾을 수 없어요/);
   assert.match(resendFail({ status: 409 }), /사용 중인 계정/);
-  assert.match(resendFail({ status: 0 }), /네트워크/);
-  assert.match(resendFail({ status: 502, message: 'SMTP 535 auth failed' }), /메일을 보내지 못했어요/);
+  assert.match(resendFail({ status: 0 }), /네트워크.*1분 뒤에 다시 발급/);
+  assert.match(resendFail({ status: 502, message: 'SMTP 535 auth failed' }), /만들지 못했어요.*1분 뒤에 다시 발급/);
   assert.doesNotMatch(resendFail({ status: 502, message: 'SMTP 535 auth failed' }), /SMTP/);
 });
 

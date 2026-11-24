@@ -3,7 +3,7 @@
 사용자 목록의 사용 중(status active) 계정마다 버튼(aria-label '○○님에게 임시 비밀번호 메일 다시 보내기'). 누르면 확인 창(기존 dialog) → `POST /v1/admin/users/:id/resend-temp-password` → 서버는 메일을 보내지 않으므로(오너 결정) 응답의 tempPassword 를 기존 showSecret 창으로 한 번 보여 주고 '메일 보내기'(클릭 때만 approvalMailto 생성)로 메일 앱을 연다. 완료 알림에는 마스킹 주소(maskedEmail)만, 비밀번호는 알림·저장소에 안 남김. 429·기타 오류는 쉬운 한국어. 진행 중 버튼 비활성·aria-busy.
 파일: admin-resend.js(신규, 문구·조건), admin.js, admin.html(알림 aria-live), admin.css, test/admin-resend.test.mjs, 버전 0.4.25·sw 캐시 v54.
 시험: npm test 59/59. 가짜 API + 헤드리스 Chrome(320·375·768·1280): 정지 계정엔 버튼 없음, 가로 넘침 없음, 확인 창 문구·포커스 이동·Esc 닫힘(호출 0), 429·500 알림, 성공 시 비밀번호 창+마스킹 알림. 실제 전송·운영 호출 없음.
-Retry-After 는 auth.js api() 가 헤더를 넘기지 않아 읽지 않고 '1분에 한 번, 하루 5번' 일반 안내.
+429 는 본문 retryAfterSeconds·reason(minute|day)을 읽어 안내(auth.js api() 오류에 두 필드 추가), 응답 유실 시 "1분 뒤 다시 발급" 안내를 오류 알림에 포함.
 - [ ] 푸시·배포(백엔드 v0.1.26 배포 뒤 코디네이터 승인 필요)
 
 ---
