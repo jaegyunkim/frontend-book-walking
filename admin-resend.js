@@ -13,6 +13,20 @@ export function resendButton(u) {
   return canResend(u) ? `<button type="button" data-a="resend" aria-label="${esc(resendLabel(u))}">임시 비밀번호 메일 다시 보내기</button>` : '';
 }
 
+// 가입 승인 탭의 '승인 완료' 카드 버튼(신청 행 r: login_id·display_name·status). 승인 완료 카드에만.
+export const regResendLabel = r => `${resendName({ displayName: r?.display_name, loginId: r?.login_id })}님의 임시 비밀번호 생성`;
+export function regResendButton(r) {
+  return r?.status === 'approved' ? `<button type="button" data-resend-reg="${esc(r.id)}" data-login="${esc(r.login_id)}" data-name="${esc(r.display_name)}" aria-label="${esc(regResendLabel(r))}">임시 비밀번호 생성</button>` : '';
+}
+// 신청 행에는 계정 id 가 없어 로그인 이메일(login_id, 유일)로 사용자 목록에서 찾는다. 없으면 404, 사용 중이 아니면 409 로 같은 오류 안내를 쓴다.
+export function findAccountId(users, loginId) {
+  const key = String(loginId ?? '').trim().toLowerCase();
+  const u = (users ?? []).find(x => String(x.loginId ?? '').trim().toLowerCase() === key);
+  if (!u) throw Object.assign(new Error('NOT_FOUND'), { status: 404 });
+  if (u.status !== 'active') throw Object.assign(new Error('NOT_ACTIVE'), { status: 409 });
+  return u.id;
+}
+
 export const resendConfirmHtml = u => `<h2>임시 비밀번호 메일 다시 보내기</h2><p>${esc(resendName(u))}님에게 새 임시 비밀번호를 메일로 보낼까요? 기존 비밀번호는 더 이상 쓸 수 없어요.</p>`;
 
 // API 응답에서 마스킹된 주소만 꺼낸다(필드 이름이 달라도 문자열이면 그대로)

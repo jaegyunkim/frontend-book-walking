@@ -324,5 +324,5 @@ body { word-break: keep-all; overflow-wrap: anywhere; }
 .atabs button:focus-visible { outline-offset: -3px; }
 
 /* v0.4.25 임시 비밀번호 메일 다시 보내기: 긴 버튼 문구가 좁은 카드에서 넘치지 않게 줄바꿈 */
-.acts button[data-a="resend"] { max-width: 100%; white-space: normal; text-align: center; line-height: 1.35; }
+.acts button[data-a="resend"], .acts button[data-resend-reg] { max-width: 100%; white-space: normal; text-align: center; line-height: 1.35; }
 .acts button[data-a="resend"][aria-busy="true"] { opacity: .6; cursor: progress; }

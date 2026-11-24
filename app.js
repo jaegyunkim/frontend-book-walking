@@ -1,10 +1,10 @@
-import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage, nextLoginText, timesKo } from './role-policy.js?v=0.4.25';
+import { ROLE_LABEL, DAY_NOTE, policyText, logoutUsage, nextLoginText, timesKo } from './role-policy.js?v=0.4.26';
 // 북 워킹 모바일 웹. 로그인·세션은 frontend-go-fishing/auth.js 를 그대로 쓴다(토큰은 sessionStorage, 서버가 만료 최종 판단).
-import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes, loginQuota } from './auth.js?v=0.4.25';
+import { state, api, health, login, logout, startTimer, setOnAuthLost, setOnMustChange, saveAuth, syncAccount, remaining, sessionMinutes, loginQuota } from './auth.js?v=0.4.26';
 
 import { createDestinationDialog, pointOf } from './destination.js?v=0.1.8';
-import { bindRadioGroup, syncRoving } from './radio-group.js?v=0.4.25';
-import { evidenceHtml } from './evidence.js?v=0.4.25';
+import { bindRadioGroup, syncRoving } from './radio-group.js?v=0.4.26';
+import { evidenceHtml } from './evidence.js?v=0.4.26';
 const openDestination = createDestinationDialog(document, api);
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

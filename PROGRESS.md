@@ -1,3 +1,12 @@
+# PROGRESS · 가입 승인 탭 승인 완료 카드 '임시 비밀번호 생성' (task_0d0ee9fdee32, v0.4.26)
+
+「신청 승인」 탭의 승인 완료(approved) 카드에만 '임시 비밀번호 생성' 버튼(aria-label '○○님의 임시 비밀번호 생성', 대기·거절 카드엔 없음, 기존 승인·거절·승인 회수 그대로). 사용자 목록 버튼과 같은 공용 함수 runResend(admin.js)를 써서 확인 창 → `POST /v1/admin/users/:id/resend-temp-password` → showSecret(승인 때와 같은 팝업, '메일 보내기'는 클릭 때만 approvalMailto(login_id, 비밀번호) 로 mailto 생성, approval-email.js 제목·본문 그대로) → 마스킹 주소 알림. 오류는 v0.4.25 resendFail(429 retryAfterSeconds 포함) 재사용.
+계정 id 찾는 법: GET /v1/admin/registrations 행(id,login_id,display_name,status,…)에는 계정 id 가 없어(DB 의 user_id 는 목록 응답에 안 나옴) 백엔드 수정 없이, 버튼을 누르고 확인한 뒤 GET /v1/admin/users 에서 loginId(대소문자 무시)로 찾는다(findAccountId). 목록에 없으면 404, 사용 중이 아니면 409 로 처리해 API 호출 없이 쉬운 한국어 오류 알림.
+파일: admin-resend.js(regResendButton·findAccountId), admin.js(runResend 추출·카드 연결), admin.css, test/admin-resend.test.mjs, 버전 0.4.26·sw 캐시 v55.
+시험: npm test 62/62. 가짜 API+헤드리스 Chrome 320·375·768·1280: 승인 완료 3장에만 버튼, 가로 넘침 없음·버튼이 카드 안, 확인 창 문구·Esc(호출 0), 429·500·계정 없음(404)·정지(409) 알림(API 호출 없음), 성공 시 비밀번호 팝업+메일 보내기 버튼+마스킹 알림, 저장소·화면에 비밀번호 없음. 실제 호출 없음.
+
+---
+
 # PROGRESS · 관리자 '임시 비밀번호 메일 다시 보내기' (task_19ab5e834bae, v0.4.25)
 
 사용자 목록의 사용 중(status active) 계정마다 버튼(aria-label '○○님에게 임시 비밀번호 메일 다시 보내기'). 누르면 확인 창(기존 dialog) → `POST /v1/admin/users/:id/resend-temp-password` → 서버는 메일을 보내지 않으므로(오너 결정) 응답의 tempPassword 를 기존 showSecret 창으로 한 번 보여 주고 '메일 보내기'(클릭 때만 approvalMailto 생성)로 메일 앱을 연다. 완료 알림에는 마스킹 주소(maskedEmail)만, 비밀번호는 알림·저장소에 안 남김. 429·기타 오류는 쉬운 한국어. 진행 중 버튼 비활성·aria-busy.
