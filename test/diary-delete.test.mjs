@@ -32,7 +32,8 @@ test('일기 화면 연결: DELETE 호출·확인 창·진행 중 비활성·성
   assert.match(a, /\$\('#diaryList'\)\.querySelectorAll\('\[data-walk-del\]'\)/);
   assert.match(a, /btn\.disabled = true; btn\.setAttribute\('aria-busy', 'true'\)/);
   assert.match(a, /toast\(DELETE_DONE\); await loadDiary\(\)/);
-  assert.match(a, /catch \(e\) \{ toast\(deleteFailMsg\(e\)\); btn\.disabled = false/);
+  assert.match(a, /if \(e\.status === 404\) \{ toast\(DELETE_DONE\); await loadDiary\(\); return; \}/);
+  assert.match(a, /toast\(deleteFailMsg\(e\)\); btn\.disabled = false/);
   assert.match(a, /if \(d\.returnValue !== 'ok'\) \{ btn\.focus\(\); return; \}/);
   assert.match(h, /<dialog id="diaryDelDialog" aria-labelledby="diaryDelTitle"><form method="dialog">/);
 });

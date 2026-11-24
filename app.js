@@ -261,7 +261,10 @@ function askDeleteWalk(btn) {
     if (d.returnValue !== 'ok') { btn.focus(); return; }
     btn.disabled = true; btn.setAttribute('aria-busy', 'true');
     try { await api('/v1/me/walks/' + encodeURIComponent(w.id), { method: 'DELETE' }); toast(DELETE_DONE); await loadDiary(); $('#diaryList').querySelector('[data-walk-del]')?.focus(); }
-    catch (e) { toast(deleteFailMsg(e)); btn.disabled = false; btn.removeAttribute('aria-busy'); }
+    catch (e) {
+      if (e.status === 404) { toast(DELETE_DONE); await loadDiary(); return; } // 이미 지워진 일기: 오류 대신 목록만 새로 고침
+      toast(deleteFailMsg(e)); btn.disabled = false; btn.removeAttribute('aria-busy');
+    }
   };
   d.showModal();
 }
